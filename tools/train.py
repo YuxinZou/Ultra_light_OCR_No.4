@@ -113,8 +113,8 @@ def test_reader(config, device, logger):
             if count % 1 == 0:
                 batch_time = time.time() - starttime
                 starttime = time.time()
-                logger.info("reader: {}, {}, {}".format(
-                    count, len(data[0]), batch_time))
+                logger.info("reader: {}, {}, {}".format(count, len(data[0]),
+                                                        batch_time))
     except Exception as e:
         logger.info(e)
     logger.info("finish reader: {}, Success!".format(count))
