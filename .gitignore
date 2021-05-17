@@ -28,3 +28,7 @@ paddleocr.egg-info/
 
 venv/
 tmp/
+data*
+data/
+notebooks/
+kuro/
