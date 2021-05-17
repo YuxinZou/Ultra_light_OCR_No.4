@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
 import string
+from abc import ABCMeta, abstractmethod
+
+import numpy as np
 import paddle
-from paddle.nn import functional as F
 
 
-class BaseRecLabelDecode(object):
+class BaseRecLabelDecode(metaclass=ABCMeta):
     """ Convert between text-label and text-index """
-
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -30,8 +30,9 @@ class BaseRecLabelDecode(object):
             'rsc', 'bg', 'uk', 'be', 'te', 'ka', 'chinese_cht', 'hi', 'mr',
             'ne', 'EN', 'latin', 'arabic', 'cyrillic', 'devanagari'
         ]
-        assert character_type in support_character_type, "Only {} are supported now but get {}".format(
-            support_character_type, character_type)
+        assert character_type in support_character_type, \
+            "Only {} are supported now but get {}".format(
+                support_character_type, character_type)
 
         self.beg_str = "sos"
         self.end_str = "eos"
@@ -45,8 +46,9 @@ class BaseRecLabelDecode(object):
             dict_character = list(self.character_str)
         elif character_type in support_character_type:
             self.character_str = ""
-            assert character_dict_path is not None, "character_dict_path should not be None when character_type is {}".format(
-                character_type)
+            assert character_dict_path is not None, \
+                "character_dict_path should not be None when " \
+                "character_type is {}".format(character_type)
             with open(character_dict_path, "rb") as fin:
                 lines = fin.readlines()
                 for line in lines:
@@ -65,8 +67,9 @@ class BaseRecLabelDecode(object):
             self.dict[char] = i
         self.character = dict_character
 
-    def add_special_char(self, dict_character):
-        return dict_character
+    @abstractmethod
+    def add_special_char(self, dict_character: str) -> str:
+        pass
 
     def decode(self, text_index, text_prob=None, is_remove_duplicate=False):
         """ convert text-index into text-label. """
@@ -81,11 +84,11 @@ class BaseRecLabelDecode(object):
                     continue
                 if is_remove_duplicate:
                     # only for predict
-                    if idx > 0 and text_index[batch_idx][idx - 1] == text_index[
-                            batch_idx][idx]:
+                    if idx > 0 and text_index[batch_idx][
+                            idx - 1] == text_index[batch_idx][idx]:
                         continue
-                char_list.append(self.character[int(text_index[batch_idx][
-                    idx])])
+                char_list.append(self.character[int(
+                    text_index[batch_idx][idx])])
                 if text_prob is not None:
                     conf_list.append(text_prob[batch_idx][idx])
                 else:
@@ -100,7 +103,6 @@ class BaseRecLabelDecode(object):
 
 class CTCLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
-
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -127,7 +129,6 @@ class CTCLabelDecode(BaseRecLabelDecode):
 
 class AttnLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
-
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -159,11 +160,11 @@ class AttnLabelDecode(BaseRecLabelDecode):
                     break
                 if is_remove_duplicate:
                     # only for predict
-                    if idx > 0 and text_index[batch_idx][idx - 1] == text_index[
-                            batch_idx][idx]:
+                    if idx > 0 and text_index[batch_idx][
+                            idx - 1] == text_index[batch_idx][idx]:
                         continue
-                char_list.append(self.character[int(text_index[batch_idx][
-                    idx])])
+                char_list.append(self.character[int(
+                    text_index[batch_idx][idx])])
                 if text_prob is not None:
                     conf_list.append(text_prob[batch_idx][idx])
                 else:
@@ -210,7 +211,6 @@ class AttnLabelDecode(BaseRecLabelDecode):
 
 class SRNLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
-
     def __init__(self,
                  character_dict_path=None,
                  character_type='en',
@@ -236,7 +236,8 @@ class SRNLabelDecode(BaseRecLabelDecode):
         text = self.decode(preds_idx, preds_prob)
 
         if label is None:
-            text = self.decode(preds_idx, preds_prob, is_remove_duplicate=False)
+            text = self.decode(
+                preds_idx, preds_prob, is_remove_duplicate=False)
             return text
         label = self.decode(label)
         return text, label
@@ -255,11 +256,11 @@ class SRNLabelDecode(BaseRecLabelDecode):
                     continue
                 if is_remove_duplicate:
                     # only for predict
-                    if idx > 0 and text_index[batch_idx][idx - 1] == text_index[
-                            batch_idx][idx]:
+                    if idx > 0 and text_index[batch_idx][
+                            idx - 1] == text_index[batch_idx][idx]:
                         continue
-                char_list.append(self.character[int(text_index[batch_idx][
-                    idx])])
+                char_list.append(self.character[int(
+                    text_index[batch_idx][idx])])
                 if text_prob is not None:
                     conf_list.append(text_prob[batch_idx][idx])
                 else:
