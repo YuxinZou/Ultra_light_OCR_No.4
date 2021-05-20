@@ -32,6 +32,136 @@ class RecAug(object):
         return data
 
 
+class Tia(object):
+    def __init__(self, aug_prob=0.4,
+                 distort=True,
+                 stretch=True,
+                 perspective=True,
+                 size_thres=(20, 20),
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.distort = distort
+        self.stretch = stretch
+        self.perspective = perspective
+        self.h_thres, self.w_thres = size_thres
+
+    def __call__(self, data):
+        img = data['image']
+        img_height, img_width = img.shape[0:2]
+        if self.distort:
+            if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+                img = tia_distort(img, random.randint(3, 6))
+
+        if self.stretch:
+            if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+                img = tia_stretch(img, random.randint(3, 6))
+
+        if self.perspective:
+            if random.random() <= self.aug_prob:
+                img = tia_perspective(img)
+        data['image'] = img
+
+        return data
+
+
+class HeightCrop(object):
+    def __init__(self, aug_prob=0.4,
+                 size_thres=(20, 20),
+                 top_range=(1, 8),
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.h_thres, self.w_thres = size_thres
+        self.top_range = top_range
+
+    def __call__(self, data):
+        img = data['image']
+        img_height, img_width = img.shape[0:2]
+        if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+            img = get_crop(img, self.top_range)
+        data['image'] = img
+
+        return data
+
+
+class GaussBlur(object):
+    def __init__(self, aug_prob=0.4,
+                 size_thres=(10, 10),
+                 kernel_size=(5, 5),
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.size_thres = size_thres
+        self.kernel_size = tuple(kernel_size)
+
+    def __call__(self, data):
+        img = data['image']
+        if random.random() <= self.aug_prob:
+            img = blur(img, self.size_thres, self.kernel_size)
+        data['image'] = img
+
+        return data
+
+
+class Color(object):
+    def __init__(self, aug_prob=0.4,
+                 delta_control=0.0001,
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.delta_control = delta_control
+
+    def __call__(self, data):
+        img = data['image']
+        if random.random() <= self.aug_prob:
+            img = cvtColor(img, self.delta_control)
+        data['image'] = img
+
+        return data
+
+
+class ShiftJitter(object):
+    def __init__(self, aug_prob=1.0,
+                 size_thres=(10, 10),
+                 shift_control=0.01,
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.size_thres = size_thres
+        self.shift_control = shift_control
+
+    def __call__(self, data):
+        img = data['image']
+        if random.random() <= self.aug_prob:
+            img = jitter(img, self.size_thres, self.shift_control)
+        data['image'] = img
+
+        return data
+
+
+class GaussNoise(object):
+    def __init__(self, aug_prob=0.4, mean=0, var=0.1, **kwargs):
+        self.aug_prob = aug_prob
+        self.mean = mean
+        self.var = var
+
+    def __call__(self, data):
+        img = data['image']
+        if random.random() <= self.aug_prob:
+            img = add_gasuss_noise(img, self.mean, self.var)
+        data['image'] = img
+
+        return data
+
+
+class PixelReverse(object):
+    def __init__(self, aug_prob=0.4, **kwargs):
+        self.aug_prob = aug_prob
+
+    def __call__(self, data):
+        img = data['image']
+        if random.random() <= self.aug_prob:
+            img = 255 - img
+        data['image'] = img
+        return data
+
+
 class ClsResizeImg(object):
     def __init__(self, image_shape, **kwargs):
         self.image_shape = image_shape
@@ -73,8 +203,10 @@ class SRNRecResizeImg(object):
         img = data['image']
         norm_img = resize_norm_img_srn(img, self.image_shape)
         data['image'] = norm_img
-        [encoder_word_pos, gsrm_word_pos, gsrm_slf_attn_bias1, gsrm_slf_attn_bias2] = \
-            srn_other_inputs(self.image_shape, self.num_heads, self.max_text_length)
+        [encoder_word_pos, gsrm_word_pos, gsrm_slf_attn_bias1,
+         gsrm_slf_attn_bias2] = \
+            srn_other_inputs(self.image_shape, self.num_heads,
+                             self.max_text_length)
 
         data['encoder_word_pos'] = encoder_word_pos
         data['gsrm_word_pos'] = gsrm_word_pos
@@ -160,7 +292,6 @@ def resize_norm_img_srn(img, image_shape):
 
 
 def srn_other_inputs(image_shape, num_heads, max_text_length):
-
     imgC, imgH, imgW = image_shape
     feature_dim = int((imgH / 8) * (imgW / 8))
 
@@ -193,36 +324,38 @@ def flag():
     return 1 if random.random() > 0.5000001 else -1
 
 
-def cvtColor(img):
+def cvtColor(img, delta_control=0.001):
     """
     cvtColor
     """
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    delta = 0.001 * random.random() * flag()
+    delta = delta_control * random.random() * flag()
     hsv[:, :, 2] = hsv[:, :, 2] * (1 + delta)
     new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
     return new_img
 
 
-def blur(img):
+def blur(img, size_thres=(10, 10), kernel_size=(5, 5)):
     """
     blur
     """
     h, w, _ = img.shape
-    if h > 10 and w > 10:
-        return cv2.GaussianBlur(img, (5, 5), 1)
+    h_thres, w_thres = size_thres
+    if h > h_thres and w > w_thres:
+        return cv2.GaussianBlur(img, kernel_size, 1)
     else:
         return img
 
 
-def jitter(img):
+def jitter(img, size_thres=(10, 10), shift_control=0.01):
     """
     jitter
     """
     w, h, _ = img.shape
-    if h > 10 and w > 10:
+    h_thres, w_thres = size_thres
+    if h > h_thres and w > w_thres:
         thres = min(w, h)
-        s = int(random.random() * thres * 0.01)
+        s = int(random.random() * thres * shift_control)
         src_img = img.copy()
         for i in range(s):
             img[i:, i:, :] = src_img[:w - i, :h - i, :]
@@ -236,20 +369,21 @@ def add_gasuss_noise(image, mean=0, var=0.1):
     Gasuss noise
     """
 
-    noise = np.random.normal(mean, var**0.5, image.shape)
+    noise = np.random.normal(mean, var ** 0.5, image.shape)
     out = image + 0.5 * noise
     out = np.clip(out, 0, 255)
     out = np.uint8(out)
     return out
 
 
-def get_crop(image):
+def get_crop(image, top_range=(1, 8)):
     """
     random crop
     """
     h, w, _ = image.shape
-    top_min = 1
-    top_max = 8
+    # top_min = 1
+    # top_max = 8
+    top_min, top_max = top_range
     top_crop = int(random.randint(top_min, top_max))
     top_crop = min(top_crop, h - 1)
     crop_img = image.copy()
@@ -321,7 +455,7 @@ def get_warpR(config):
     if w > 69 and w < 112:
         anglex = anglex * 1.5
 
-    z = np.sqrt(w**2 + h**2) / 2 / np.tan(rad(fov / 2))
+    z = np.sqrt(w ** 2 + h ** 2) / 2 / np.tan(rad(fov / 2))
     # Homogeneous coordinate transformation matrix
     rx = np.array([[1, 0, 0, 0],
                    [0, np.cos(rad(anglex)), -np.sin(rad(anglex)), 0], [
