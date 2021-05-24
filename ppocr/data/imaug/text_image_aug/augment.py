@@ -41,15 +41,15 @@ def tia_distort(src, segment=4):
     half_thresh = thresh * 0.5
 
     for cut_idx in np.arange(1, segment, 1):
-        src_pts.append([cut * cut_idx, 0])
-        src_pts.append([cut * cut_idx, img_h])
+        src_pts.append([cut * cut_idx, 0])                          # x1, y1
+        src_pts.append([cut * cut_idx, img_h])                      # x2, y2
         dst_pts.append([
-            cut * cut_idx + np.random.randint(thresh) - half_thresh,
-            np.random.randint(thresh) - half_thresh
+            cut * cut_idx + np.random.randint(thresh) - half_thresh,    # x1
+            np.random.randint(thresh) - half_thresh                     # y1
         ])
         dst_pts.append([
-            cut * cut_idx + np.random.randint(thresh) - half_thresh,
-            img_h + np.random.randint(thresh) - half_thresh
+            cut * cut_idx + np.random.randint(thresh) - half_thresh,    # x2
+            img_h + np.random.randint(thresh) - half_thresh             # y2
         ])
 
     trans = WarpMLS(src, src_pts, dst_pts, img_w, img_h)

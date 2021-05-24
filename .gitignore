@@ -32,3 +32,5 @@ data*
 data/
 notebooks/
 kuro/
+log/
+checkpoint/
