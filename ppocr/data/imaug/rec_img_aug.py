@@ -17,6 +17,8 @@ import cv2
 import numpy as np
 import random
 
+import imgaug.augmenters as iaa
+
 from .text_image_aug import tia_perspective, tia_stretch, tia_distort
 
 
@@ -29,6 +31,35 @@ class RecAug(object):
         img = data['image']
         img = warp(img, 10, self.use_tia, self.aug_prob)
         data['image'] = img
+        return data
+
+
+class Iaa_AdditiveGaussianNoise(object):
+    def __init__(self, aug_prob=0.5, loc=0, scale=(0, 0.2 * 255),
+                 per_channel=True, **kwargs):
+        self.aug = iaa.Sometimes(aug_prob,
+                                 iaa.AdditiveLaplaceNoise(loc=loc, scale=tuple(scale),
+                                                          per_channel=per_channel))
+
+    def __call__(self, data):
+        imgs = data['image'][np.newaxis]
+        imgs = self.aug(images=imgs)
+        data['image'] = imgs[0]
+        return data
+
+
+class Iaa_MotionBlur(object):
+    def __init__(self, aug_prob=0.5, k=(3, 7), angle=(0, 360),
+                 direction=(-1.0, 1.0), order=1, **kwargs):
+        self.aug = iaa.Sometimes(aug_prob,
+                                 iaa.MotionBlur(k=tuple(k), angle=tuple(angle),
+                                                direction=tuple(direction),
+                                                order=order))
+
+    def __call__(self, data):
+        imgs = data['image'][np.newaxis]
+        imgs = self.aug(images=imgs)
+        data['image'] = imgs[0]
         return data
 
 

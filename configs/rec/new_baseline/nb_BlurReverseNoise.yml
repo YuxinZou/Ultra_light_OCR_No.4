@@ -3,7 +3,7 @@ Global:
   epoch_num: 500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/nb
+  save_model_dir: ./checkpoint/nb_BlurReverseNoise
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 500]
@@ -81,6 +81,10 @@ Train:
           aug_prob: 0.4
           size_thres: [20, 20]
           top_range: [1, 8]
+      - GaussNoise:
+          aug_prob: 0.4
+          mean: 0
+          var: 0.1
       - GaussBlur:
           aug_prob: 0.4
           size_thres: [20, 20]
@@ -92,10 +96,10 @@ Train:
           aug_prob: 1.0
           size_thres: [10, 10]
           shift_control: 0.01
-      - GaussNoise:
-          aug_prob: 0.4
-          mean: 0
-          var: 0.1
+      # - GaussNoise:
+      #     aug_prob: 0.4
+      #     mean: 0
+      #     var: 0.1
       - PixelReverse:
           aug_prob: 0.4
       - CTCLabelEncode: # Class handling label
