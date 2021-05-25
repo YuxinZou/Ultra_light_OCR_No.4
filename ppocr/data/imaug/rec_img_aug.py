@@ -37,9 +37,11 @@ class RecAug(object):
 class Iaa_AdditiveGaussianNoise(object):
     def __init__(self, aug_prob=0.5, loc=0, scale=(0, 0.2 * 255),
                  per_channel=True, **kwargs):
-        self.aug = iaa.Sometimes(aug_prob,
-                                 iaa.AdditiveLaplaceNoise(loc=loc, scale=tuple(scale),
-                                                          per_channel=per_channel))
+        self.aug = iaa.Sometimes(
+            aug_prob,
+            iaa.AdditiveLaplaceNoise(loc=loc, scale=tuple(scale),
+                                     per_channel=per_channel),
+        )
 
     def __call__(self, data):
         imgs = data['image'][np.newaxis]
@@ -51,10 +53,11 @@ class Iaa_AdditiveGaussianNoise(object):
 class Iaa_MotionBlur(object):
     def __init__(self, aug_prob=0.5, k=(3, 7), angle=(0, 360),
                  direction=(-1.0, 1.0), order=1, **kwargs):
-        self.aug = iaa.Sometimes(aug_prob,
-                                 iaa.MotionBlur(k=tuple(k), angle=tuple(angle),
-                                                direction=tuple(direction),
-                                                order=order))
+        self.aug = iaa.Sometimes(
+            aug_prob,
+            iaa.MotionBlur(k=tuple(k), angle=tuple(angle),
+                           direction=tuple(direction), order=order)
+        )
 
     def __call__(self, data):
         imgs = data['image'][np.newaxis]
@@ -80,11 +83,19 @@ class Tia(object):
         img = data['image']
         img_height, img_width = img.shape[0:2]
         if self.distort:
-            if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+            if (
+                random.random() <= self.aug_prob and
+                img_height >= self.h_thres and
+                img_width >= self.w_thres
+            ):
                 img = tia_distort(img, random.randint(3, 6))
 
         if self.stretch:
-            if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+            if (
+                random.random() <= self.aug_prob and
+                img_height >= self.h_thres and
+                img_width >= self.w_thres
+            ):
                 img = tia_stretch(img, random.randint(3, 6))
 
         if self.perspective:
@@ -107,7 +118,11 @@ class HeightCrop(object):
     def __call__(self, data):
         img = data['image']
         img_height, img_width = img.shape[0:2]
-        if random.random() <= self.aug_prob and img_height >= self.h_thres and img_width >= self.w_thres:
+        if (
+            random.random() <= self.aug_prob and
+            img_height >= self.h_thres and
+            img_width >= self.w_thres
+        ):
             img = get_crop(img, self.top_range)
         data['image'] = img
 
@@ -481,8 +496,9 @@ def get_warpR(config):
     """
     get_warpR
     """
-    anglex, angley, anglez, fov, w, h, r = \
-        config.anglex, config.angley, config.anglez, config.fov, config.w, config.h, config.r
+    anglex, angley, anglez, fov, w, h, r = (
+        config.anglex, config.angley, config.anglez,
+        config.fov, config.w, config.h, config.r)
     if w > 69 and w < 112:
         anglex = anglex * 1.5
 
@@ -538,7 +554,7 @@ def get_warpR(config):
         dy = -r1
         T1 = np.float32([[1., 0, dx], [0, 1., dy], [0, 0, 1.0 / ratio]])
         ret = T1.dot(warpR)
-    except:
+    except Exception:
         ratio = 1.0
         T1 = np.float32([[1., 0, 0], [0, 1., 0], [0, 0, 1.]])
         ret = T1

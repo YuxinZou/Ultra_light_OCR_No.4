@@ -21,27 +21,28 @@ import sys
 import platform
 import yaml
 import time
-import shutil
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
+
 import paddle
 import paddle.distributed as dist
 from tqdm import tqdm
-from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 from ppocr.utils.stats import TrainingStats
 from ppocr.utils.save_load import save_model
 from ppocr.utils.utility import print_dict
 from ppocr.utils.logging import get_logger
 from ppocr.data import build_dataloader
-import numpy as np
 
 
 class ArgsParser(ArgumentParser):
     def __init__(self):
-        super(ArgsParser, self).__init__(
-            formatter_class=RawDescriptionHelpFormatter)
+        super(ArgsParser,
+              self).__init__(formatter_class=RawDescriptionHelpFormatter)
         self.add_argument("-c", "--config", help="configuration file to use")
-        self.add_argument(
-            "-o", "--opt", nargs='+', help="set configuration options")
+        self.add_argument("-o",
+                          "--opt",
+                          nargs='+',
+                          help="set configuration options")
 
     def parse_args(self, argv=None):
         args = super(ArgsParser, self).parse_args(argv)
@@ -63,7 +64,6 @@ class ArgsParser(ArgumentParser):
 
 class AttrDict(dict):
     """Single level attribute dict, NOT recursive"""
-
     def __init__(self, **kwargs):
         super(AttrDict, self).__init__()
         super(AttrDict, self).update(kwargs)
@@ -76,7 +76,11 @@ class AttrDict(dict):
 
 global_config = AttrDict()
 
-default_config = {'Global': {'debug': False, }}
+default_config = {
+    'Global': {
+        'debug': False,
+    }
+}
 
 
 def load_config(file_path):
@@ -108,10 +112,11 @@ def merge_config(config):
                 global_config[key] = value
         else:
             sub_keys = key.split('.')
-            assert (
-                sub_keys[0] in global_config
-            ), "the sub_keys can only be one of global_config: {}, but get: {}, please check your running command".format(
-                global_config.keys(), sub_keys[0])
+            assert (sub_keys[0] in global_config), (
+                'the sub_keys can only be one of global_config: '
+                '{}, but get: {}, please check your running command'.format(
+                    global_config.keys(), sub_keys[0])
+            )
             cur = global_config[sub_keys[0]]
             for idx, sub_key in enumerate(sub_keys[1:]):
                 if idx == len(sub_keys) - 2:
@@ -135,23 +140,25 @@ def check_gpu(use_gpu):
         if use_gpu and not paddle.is_compiled_with_cuda():
             print(err)
             sys.exit(1)
-    except Exception as e:
+    except Exception:
         pass
 
 
-def train(config,
-          train_dataloader,
-          valid_dataloader,
-          device,
-          model,
-          loss_class,
-          optimizer,
-          lr_scheduler,
-          post_process_class,
-          eval_class,
-          pre_best_model_dict,
-          logger,
-          vdl_writer=None):
+def train(
+    config,
+    train_dataloader,
+    valid_dataloader,
+    device,
+    model,
+    loss_class,
+    optimizer,
+    lr_scheduler,
+    post_process_class,
+    eval_class,
+    pre_best_model_dict,
+    logger,
+    vdl_writer=None,
+):
     cal_metric_during_train = config['Global'].get('cal_metric_during_train',
                                                    False)
     log_smooth_window = config['Global']['log_smooth_window']
@@ -166,12 +173,12 @@ def train(config,
         eval_batch_step = eval_batch_step[1]
         if len(valid_dataloader) == 0:
             logger.info(
-                'No Images in eval dataset, evaluation during training will be disabled'
+                'No Images in eval dataset, evaluation during training will be disabled'  # noqa: E501
             )
             start_eval_step = 1e111
         logger.info(
-            "During the training process, after the {}th iteration, an evaluation is run every {} iterations".
-            format(start_eval_step, eval_batch_step))
+            "During the training process, after the {}th iteration, an evaluation is run every {} iterations".format(start_eval_step, eval_batch_step)  # noqa: E501
+        )
     save_epoch_step = config['Global']['save_epoch_step']
     save_model_dir = config['Global']['save_model_dir']
     if not os.path.exists(save_model_dir):
@@ -192,7 +199,12 @@ def train(config,
 
     for epoch in range(start_epoch, epoch_num + 1):
         train_dataloader = build_dataloader(
-            config, 'Train', device, logger, seed=epoch)
+            config,
+            'Train',
+            device,
+            logger,
+            seed=epoch,
+        )
         train_batch_cost = 0.0
         train_reader_cost = 0.0
         batch_sum = 0
@@ -240,34 +252,43 @@ def train(config,
                     vdl_writer.add_scalar('TRAIN/{}'.format(k), v, global_step)
                 vdl_writer.add_scalar('TRAIN/lr', lr, global_step)
 
-            if dist.get_rank() == 0 and (
-                (global_step > 0 and global_step % print_batch_step == 0) or
-                (idx >= len(train_dataloader) - 1)):
+            if (dist.get_rank() == 0 and
+                ((global_step > 0 and global_step % print_batch_step == 0) or
+                 (idx >= len(train_dataloader) - 1))):
                 logs = train_stats.log()
-                strs = 'epoch: [{}/{}], iter: {}, {}, reader_cost: {:.5f} s, batch_cost: {:.5f} s, samples: {}, ips: {:.5f}'.format(
-                    epoch, epoch_num, global_step, logs, train_reader_cost /
-                    print_batch_step, train_batch_cost / print_batch_step,
-                    batch_sum, batch_sum / train_batch_cost)
+                strs = 'epoch: [{}/{}], iter: {}, {}, reader_cost: {:.5f} s, batch_cost: {:.5f} s, samples: {}, ips: {:.5f}'.format(  # noqa: E501
+                    epoch,
+                    epoch_num,
+                    global_step,
+                    logs,
+                    train_reader_cost / print_batch_step,
+                    train_batch_cost / print_batch_step,
+                    batch_sum,
+                    batch_sum / train_batch_cost,
+                )
                 logger.info(strs)
                 train_batch_cost = 0.0
                 train_reader_cost = 0.0
                 batch_sum = 0
             # eval
-            if global_step > start_eval_step and \
-                    (global_step - start_eval_step) % eval_batch_step == 0 and dist.get_rank() == 0:
+            if (global_step > start_eval_step
+                    and (global_step - start_eval_step) % eval_batch_step == 0
+                    and dist.get_rank() == 0):
                 if model_average:
                     Model_Average = paddle.incubate.optimizer.ModelAverage(
                         0.15,
                         parameters=model.parameters(),
                         min_average_window=10000,
-                        max_average_window=15625)
+                        max_average_window=15625,
+                    )
                     Model_Average.apply()
                 cur_metric = eval(
                     model,
                     valid_dataloader,
                     post_process_class,
                     eval_class,
-                    use_srn=use_srn)
+                    use_srn=use_srn,
+                )
                 cur_metric_str = 'cur metric, {}'.format(', '.join(
                     ['{}: {}'.format(k, v) for k, v in cur_metric.items()]))
                 logger.info(cur_metric_str)
@@ -278,8 +299,8 @@ def train(config,
                         if isinstance(v, (float, int)):
                             vdl_writer.add_scalar('EVAL/{}'.format(k),
                                                   cur_metric[k], global_step)
-                if cur_metric[main_indicator] >= best_model_dict[
-                        main_indicator]:
+                if cur_metric[main_indicator] >= \
+                        best_model_dict[main_indicator]:
                     best_model_dict.update(cur_metric)
                     best_model_dict['best_epoch'] = epoch
                     save_model(
@@ -290,16 +311,19 @@ def train(config,
                         is_best=True,
                         prefix='best_accuracy',
                         best_model_dict=best_model_dict,
-                        epoch=epoch)
+                        epoch=epoch,
+                    )
                 best_str = 'best metric, {}'.format(', '.join([
                     '{}: {}'.format(k, v) for k, v in best_model_dict.items()
                 ]))
                 logger.info(best_str)
                 # logger best metric
                 if vdl_writer is not None:
-                    vdl_writer.add_scalar('EVAL/best_{}'.format(main_indicator),
-                                          best_model_dict[main_indicator],
-                                          global_step)
+                    vdl_writer.add_scalar(
+                        'EVAL/best_{}'.format(main_indicator),
+                        best_model_dict[main_indicator],
+                        global_step,
+                    )
             global_step += 1
             optimizer.clear_grad()
             batch_start = time.time()
@@ -312,7 +336,8 @@ def train(config,
                 is_best=False,
                 prefix='latest',
                 best_model_dict=best_model_dict,
-                epoch=epoch)
+                epoch=epoch,
+            )
         if dist.get_rank() == 0 and epoch > 0 and epoch % save_epoch_step == 0:
             save_model(
                 model,
@@ -322,7 +347,8 @@ def train(config,
                 is_best=False,
                 prefix='iter_epoch_{}'.format(epoch),
                 best_model_dict=best_model_dict,
-                epoch=epoch)
+                epoch=epoch,
+            )
     best_str = 'best metric, {}'.format(', '.join(
         ['{}: {}'.format(k, v) for k, v in best_model_dict.items()]))
     logger.info(best_str)
@@ -331,7 +357,10 @@ def train(config,
     return
 
 
-def eval(model, valid_dataloader, post_process_class, eval_class,
+def eval(model,
+         valid_dataloader,
+         post_process_class,
+         eval_class,
          use_srn=False):
     model.eval()
     with paddle.no_grad():
@@ -394,7 +423,11 @@ def preprocess(is_train=False):
         os.makedirs(save_model_dir, exist_ok=True)
         with open(os.path.join(save_model_dir, 'config.yml'), 'w') as f:
             yaml.dump(
-                dict(config), f, default_flow_style=False, sort_keys=False)
+                dict(config),
+                f,
+                default_flow_style=False,
+                sort_keys=False,
+            )
         log_file = '{}/train.log'.format(save_model_dir)
     else:
         log_file = None
@@ -408,6 +441,6 @@ def preprocess(is_train=False):
     else:
         vdl_writer = None
     print_dict(config, logger)
-    logger.info('train with paddle {} and device {}'.format(paddle.__version__,
-                                                            device))
+    logger.info('train with paddle {} and device {}'.format(
+        paddle.__version__, device))
     return config, device, logger, vdl_writer
