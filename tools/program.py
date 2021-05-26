@@ -159,12 +159,68 @@ def train(
     logger,
     vdl_writer=None,
 ):
+    def eval_impl():
+        if model_average:
+            Model_Average = paddle.incubate.optimizer.ModelAverage(
+                0.15,
+                parameters=model.parameters(),
+                min_average_window=10000,
+                max_average_window=15625,
+            )
+            Model_Average.apply()
+        cur_metric = eval(
+            model,
+            valid_dataloader,
+            post_process_class,
+            eval_class,
+            use_srn=use_srn,
+        )
+        cur_metric_str = 'cur metric, {}'.format(', '.join(
+            ['{}: {}'.format(k, v) for k, v in cur_metric.items()]))
+        logger.info(cur_metric_str)
+
+        # logger metric
+        if vdl_writer is not None:
+            for k, v in cur_metric.items():
+                if isinstance(v, (float, int)):
+                    vdl_writer.add_scalar(
+                        'EVAL/{}'.format(k), cur_metric[k], global_step)
+        if cur_metric[main_indicator] >= \
+                best_model_dict[main_indicator]:
+            best_model_dict.update(cur_metric)
+            best_model_dict['best_epoch'] = epoch
+            save_model(
+                model,
+                optimizer,
+                save_model_dir,
+                logger,
+                is_best=True,
+                prefix='best_accuracy',
+                best_model_dict=best_model_dict,
+                epoch=epoch,
+            )
+        best_str = 'best metric, {}'.format(', '.join([
+            '{}: {}'.format(k, v) for k, v in best_model_dict.items()
+        ]))
+        logger.info(best_str)
+        # logger best metric
+        if vdl_writer is not None:
+            vdl_writer.add_scalar(
+                'EVAL/best_{}'.format(main_indicator),
+                best_model_dict[main_indicator],
+                global_step,
+            )
+
     cal_metric_during_train = config['Global'].get('cal_metric_during_train',
                                                    False)
     log_smooth_window = config['Global']['log_smooth_window']
     epoch_num = config['Global']['epoch_num']
     print_batch_step = config['Global']['print_batch_step']
-    eval_batch_step = config['Global']['eval_batch_step']
+    eval_batch_step = config['Global'].get('eval_batch_step')
+    eval_epoch_step = config['Global'].get('eval_epoch_step', None)
+    # if use epoch step for evaluation, disable batch step
+    if eval_epoch_step is not None:
+        start_eval_step = 1e111
 
     global_step = 0
     start_eval_step = 0
@@ -270,64 +326,19 @@ def train(
                 train_batch_cost = 0.0
                 train_reader_cost = 0.0
                 batch_sum = 0
-            # eval
-            if (global_step > start_eval_step
-                    and (global_step - start_eval_step) % eval_batch_step == 0
-                    and dist.get_rank() == 0):
-                if model_average:
-                    Model_Average = paddle.incubate.optimizer.ModelAverage(
-                        0.15,
-                        parameters=model.parameters(),
-                        min_average_window=10000,
-                        max_average_window=15625,
-                    )
-                    Model_Average.apply()
-                cur_metric = eval(
-                    model,
-                    valid_dataloader,
-                    post_process_class,
-                    eval_class,
-                    use_srn=use_srn,
-                )
-                cur_metric_str = 'cur metric, {}'.format(', '.join(
-                    ['{}: {}'.format(k, v) for k, v in cur_metric.items()]))
-                logger.info(cur_metric_str)
 
-                # logger metric
-                if vdl_writer is not None:
-                    for k, v in cur_metric.items():
-                        if isinstance(v, (float, int)):
-                            vdl_writer.add_scalar('EVAL/{}'.format(k),
-                                                  cur_metric[k], global_step)
-                if cur_metric[main_indicator] >= \
-                        best_model_dict[main_indicator]:
-                    best_model_dict.update(cur_metric)
-                    best_model_dict['best_epoch'] = epoch
-                    save_model(
-                        model,
-                        optimizer,
-                        save_model_dir,
-                        logger,
-                        is_best=True,
-                        prefix='best_accuracy',
-                        best_model_dict=best_model_dict,
-                        epoch=epoch,
-                    )
-                best_str = 'best metric, {}'.format(', '.join([
-                    '{}: {}'.format(k, v) for k, v in best_model_dict.items()
-                ]))
-                logger.info(best_str)
-                # logger best metric
-                if vdl_writer is not None:
-                    vdl_writer.add_scalar(
-                        'EVAL/best_{}'.format(main_indicator),
-                        best_model_dict[main_indicator],
-                        global_step,
-                    )
             global_step += 1
             optimizer.clear_grad()
             batch_start = time.time()
         if dist.get_rank() == 0:
+            if (
+                global_step > start_eval_step
+                and (global_step - start_eval_step) % eval_batch_step == 0
+            ) or (
+                epoch % eval_epoch_step == 0
+            ):
+                eval_impl()
+
             save_model(
                 model,
                 optimizer,
@@ -338,17 +349,18 @@ def train(
                 best_model_dict=best_model_dict,
                 epoch=epoch,
             )
-        if dist.get_rank() == 0 and epoch > 0 and epoch % save_epoch_step == 0:
-            save_model(
-                model,
-                optimizer,
-                save_model_dir,
-                logger,
-                is_best=False,
-                prefix='iter_epoch_{}'.format(epoch),
-                best_model_dict=best_model_dict,
-                epoch=epoch,
-            )
+            if epoch > 0 and epoch % save_epoch_step == 0:
+                save_model(
+                    model,
+                    optimizer,
+                    save_model_dir,
+                    logger,
+                    is_best=False,
+                    prefix='iter_epoch_{}'.format(epoch),
+                    best_model_dict=best_model_dict,
+                    epoch=epoch,
+                )
+
     best_str = 'best metric, {}'.format(', '.join(
         ['{}: {}'.format(k, v) for k, v in best_model_dict.items()]))
     logger.info(best_str)
