@@ -63,7 +63,8 @@ def main():
                           eval_class, use_srn)
     logger.info('metric eval ***************')
     for k, v in metric.items():
-        logger.info('{}:{}'.format(k, v))
+        # logger.info('{}:{}'.format(k, v))
+        print(f'{k}: {v:.4f}')
 
 
 if __name__ == '__main__':
