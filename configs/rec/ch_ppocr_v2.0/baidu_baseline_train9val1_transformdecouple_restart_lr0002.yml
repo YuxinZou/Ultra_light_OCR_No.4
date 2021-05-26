@@ -3,13 +3,13 @@ Global:
   epoch_num: 500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/baidu_rec_chinese_common_train9val1_transformdecouple_restart_lr0002
+  save_model_dir: ./checkpoint/baidu_baseline_train9val1_transformdecouple_restart_lr0002
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 2000]
   cal_metric_during_train: True
   pretrained_model:
-  checkpoints: ./checkpoint/baidu_rec_chinese_common_train9val1_transformdecouple_restart_lr0002/iter_epoch_108
+  checkpoints: ./checkpoint/baidu_baseline_train9val1_transformdecouple_restart_lr0002/iter_epoch_420
   save_inference_dir:
   use_visualdl: False
   infer_img: doc/imgs_words/ch/word_1.jpg
