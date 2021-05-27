@@ -37,9 +37,8 @@ class SimpleDataSet(Dataset):
         if isinstance(ratio_list, (float, int)):
             ratio_list = [float(ratio_list)] * int(data_source_num)
 
-        assert len(
-            ratio_list
-        ) == data_source_num, "The length of ratio_list should be the same as the file_list."
+        assert len(ratio_list) == data_source_num, \
+            "The length of ratio_list should be the same as the file_list."
         self.data_dir = dataset_config['data_dir']
         self.do_shuffle = loader_config['shuffle']
 
@@ -49,7 +48,8 @@ class SimpleDataSet(Dataset):
         self.data_idx_order_list = list(range(len(self.data_lines)))
         if self.mode == "train" and self.do_shuffle:
             self.shuffle_data_random()
-        self.ops = create_operators(dataset_config['transforms'], global_config)
+        self.ops = create_operators(
+            dataset_config['transforms'], global_config)
 
     def get_image_info_list(self, file_list, ratio_list):
         if isinstance(file_list, str):
@@ -92,7 +92,8 @@ class SimpleDataSet(Dataset):
                     data_line, e))
             outs = None
         if outs is None:
-            # during evaluation, we should fix the idx to get same results for many times of evaluation.
+            # during evaluation, we should fix the idx to get same results
+            # for many times of evaluation.
             rnd_idx = np.random.randint(self.__len__(
             )) if self.mode == "train" else (idx + 1) % self.__len__()
             return self.__getitem__(rnd_idx)
