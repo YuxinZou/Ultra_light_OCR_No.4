@@ -330,13 +330,15 @@ def train(
             global_step += 1
             optimizer.clear_grad()
             batch_start = time.time()
+
+            if dist.get_rank() == 0:
+                if (
+                    global_step > start_eval_step
+                    and (global_step - start_eval_step) % eval_batch_step == 0
+                ):
+                    eval_impl()
         if dist.get_rank() == 0:
-            if (
-                global_step > start_eval_step
-                and (global_step - start_eval_step) % eval_batch_step == 0
-            ) or (
-                epoch % eval_epoch_step == 0
-            ):
+            if (eval_epoch_step is not None and epoch % eval_epoch_step == 0):
                 eval_impl()
 
             save_model(
