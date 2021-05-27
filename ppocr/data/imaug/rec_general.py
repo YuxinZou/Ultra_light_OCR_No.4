@@ -44,8 +44,6 @@ class Imau:
         if self.augmenter:
             aug = self.augmenter.to_deterministic()
             data['image'] = aug.augment_image(image)
-        import cv2, random
-        cv2.imwrite(f'tmp/{random.randint(1, 999999):06d}.png', data['image'])
 
         return data
 
