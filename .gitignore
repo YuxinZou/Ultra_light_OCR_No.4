@@ -28,6 +28,7 @@ paddleocr.egg-info/
 
 venv/
 tmp/
+tmp*
 /data*
 /data/
 notebooks/
