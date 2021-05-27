@@ -28,8 +28,8 @@ paddleocr.egg-info/
 
 venv/
 tmp/
-data*
-data/
+/data*
+/data/
 notebooks/
 kuro/
 log/
