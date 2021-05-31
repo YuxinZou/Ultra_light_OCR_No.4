@@ -26,6 +26,7 @@ class MobileNetV3(nn.Layer):
                  scale=0.5,
                  large_stride=None,
                  small_stride=None,
+                 last_pool=None,
                  **kwargs):
         super(MobileNetV3, self).__init__()
         if small_stride is None:
@@ -127,7 +128,10 @@ class MobileNetV3(nn.Layer):
             act='hardswish',
             name='conv_last')
 
-        self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+        if last_pool is None:
+            self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+        else:
+            self.pool = nn.MaxPool2D(**last_pool)
         self.out_channels = make_divisible(scale * cls_ch_squeeze)
 
     def forward(self, x):
