@@ -84,17 +84,17 @@ class Tia(object):
         img_height, img_width = img.shape[0:2]
         if self.distort:
             if (
-                random.random() <= self.aug_prob and
-                img_height >= self.h_thres and
-                img_width >= self.w_thres
+                    random.random() <= self.aug_prob and
+                    img_height >= self.h_thres and
+                    img_width >= self.w_thres
             ):
                 img = tia_distort(img, random.randint(3, 6))
 
         if self.stretch:
             if (
-                random.random() <= self.aug_prob and
-                img_height >= self.h_thres and
-                img_width >= self.w_thres
+                    random.random() <= self.aug_prob and
+                    img_height >= self.h_thres and
+                    img_width >= self.w_thres
             ):
                 img = tia_stretch(img, random.randint(3, 6))
 
@@ -119,9 +119,9 @@ class HeightCrop(object):
         img = data['image']
         img_height, img_width = img.shape[0:2]
         if (
-            random.random() <= self.aug_prob and
-            img_height >= self.h_thres and
-            img_width >= self.w_thres
+                random.random() <= self.aug_prob and
+                img_height >= self.h_thres and
+                img_width >= self.w_thres
         ):
             img = get_crop(img, self.top_range)
         data['image'] = img
@@ -176,6 +176,56 @@ class ShiftJitter(object):
         img = data['image']
         if random.random() <= self.aug_prob:
             img = jitter(img, self.size_thres, self.shift_control)
+        data['image'] = img
+
+        return data
+
+
+class RandomPadding(object):
+    border_type = {
+        'constant': cv2.BORDER_CONSTANT,
+        'edge': cv2.BORDER_REPLICATE,
+        'reflect': cv2.BORDER_REFLECT_101,
+        'symmetric': cv2.BORDER_REFLECT
+    }
+
+    def __init__(self, aug_prob=0.5,
+                 size_thres=(10, 10),
+                 max_ratio=(0.1, 0.2, 0.1, 0.2),
+                 padding_mode='constant',
+                 pad_val=(127.5, 127.5, 127.5),
+                 **kwargs):
+        self.aug_prob = aug_prob
+        self.h_thres, self.w_thres = size_thres
+        self.max_ratio = max_ratio
+        self.padding_mode = self.border_type[padding_mode]
+        self.pad_val = pad_val
+
+    def __call__(self, data):
+        img = data['image']
+        img_height, img_width = img.shape[0:2]
+        if (random.random() <= self.aug_prob and
+                img_height >= self.h_thres and
+                img_width >= self.w_thres):
+            random_padding_left = round(
+                np.random.uniform(0, self.max_ratio[0]) * img_width)
+            random_padding_top = round(
+                np.random.uniform(0, self.max_ratio[1]) * img_height)
+            random_padding_right = round(
+                np.random.uniform(0, self.max_ratio[2]) * img_width)
+            random_padding_bottom = round(
+                np.random.uniform(0, self.max_ratio[3]) * img_height)
+
+            padding = (random_padding_left, random_padding_top,
+                       random_padding_right, random_padding_bottom)
+            img = cv2.copyMakeBorder(
+                img,
+                padding[1],
+                padding[3],
+                padding[0],
+                padding[2],
+                self.padding_mode,
+                value=self.pad_val)
         data['image'] = img
 
         return data

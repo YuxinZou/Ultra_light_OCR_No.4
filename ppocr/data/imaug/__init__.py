@@ -37,6 +37,7 @@ from .rec_img_aug import (
     PixelReverse,
     Iaa_AdditiveGaussianNoise,
     Iaa_MotionBlur,
+    RandomPadding,
 )
 from .randaugment import RandAugment
 from .operators import *
