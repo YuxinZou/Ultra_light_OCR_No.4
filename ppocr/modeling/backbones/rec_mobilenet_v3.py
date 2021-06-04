@@ -25,14 +25,14 @@ __all__ = ['MobileNetV3']
 
 class MobileNetV3(nn.Layer):
     def __init__(
-            self,
-            in_channels=3,
-            model_name='small',
-            scale=0.5,
-            large_stride=None,
-            small_stride=None,
-            last_pool=None,
-            **kwargs,
+        self,
+        in_channels=3,
+        model_name='small',
+        scale=0.5,
+        large_stride=None,
+        small_stride=None,
+        last_pool=None,
+        **kwargs,
     ):
         super(MobileNetV3, self).__init__()
         if small_stride is None:
