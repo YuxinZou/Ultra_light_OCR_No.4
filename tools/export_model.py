@@ -54,28 +54,30 @@ def main():
 
     if config['Architecture']['algorithm'] == "SRN":
         other_shape = [
-            paddle.static.InputSpec(
-                shape=[None, 1, 64, 256], dtype='float32'), [
-                    paddle.static.InputSpec(
-                        shape=[None, 256, 1],
-                        dtype="int64"), paddle.static.InputSpec(
-                            shape=[None, 25, 1],
-                            dtype="int64"), paddle.static.InputSpec(
-                                shape=[None, 8, 25, 25], dtype="int64"),
-                    paddle.static.InputSpec(
-                        shape=[None, 8, 25, 25], dtype="int64")
-                ]
+            paddle.static.InputSpec(shape=[None, 1, 64, 256], dtype='float32'),
+            [
+                paddle.static.InputSpec(shape=[None, 256, 1], dtype="int64"),
+                paddle.static.InputSpec(shape=[None, 25, 1], dtype="int64"),
+                paddle.static.InputSpec(shape=[None, 8, 25, 25],
+                                        dtype="int64"),
+                paddle.static.InputSpec(shape=[None, 8, 25, 25],
+                                        dtype="int64"),
+            ],
         ]
         model = to_static(model, input_spec=other_shape)
     else:
         infer_shape = [3, -1, -1]
         if config['Architecture']['model_type'] == "rec":
             infer_shape = [3, 32, -1]  # for rec model, H must be 32
-            if 'Transform' in config['Architecture'] and config['Architecture'][
-                    'Transform'] is not None and config['Architecture'][
-                        'Transform']['name'] == 'TPS':
+            if (
+                'Transform' in config['Architecture'] and
+                config['Architecture']['Transform'] is not None and
+                config['Architecture']['Transform']['name'] == 'TPS'
+            ):
                 logger.info(
-                    'When there is tps in the network, variable length input is not supported, and the input size needs to be the same as during training'
+                    'When there is tps in the network, variable length input'
+                    'is not supported, and the input size needs to be the same'
+                    'as during training'
                 )
                 infer_shape[-1] = 100
         model = to_static(

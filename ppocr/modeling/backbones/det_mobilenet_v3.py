@@ -91,7 +91,7 @@ class MobileNetV3(nn.Layer):
 
         supported_scale = [0.35, 0.5, 0.75, 1.0, 1.25]
         assert scale in supported_scale, \
-            "supported scale are {} but input scale is {}".format(supported_scale, scale)
+            f"supported scale are {supported_scale} but input scale is {scale}"
         inplanes = 16
         # conv1
         self.conv = ConvBNLayer(
@@ -103,7 +103,8 @@ class MobileNetV3(nn.Layer):
             groups=1,
             if_act=True,
             act='hardswish',
-            name='conv1')
+            name='conv1',
+        )
 
         self.stages = []
         self.out_channels = []
@@ -126,7 +127,8 @@ class MobileNetV3(nn.Layer):
                     stride=s,
                     use_se=se,
                     act=nl,
-                    name="conv" + str(i + 2)))
+                    name="conv" + str(i + 2),
+                ))
             inplanes = make_divisible(scale * c)
             i += 1
         block_list.append(
@@ -139,7 +141,8 @@ class MobileNetV3(nn.Layer):
                 groups=1,
                 if_act=True,
                 act='hardswish',
-                name='conv_last'))
+                name='conv_last',
+            ))
         self.stages.append(nn.Sequential(*block_list))
         self.out_channels.append(make_divisible(scale * cls_ch_squeeze))
         for i, stage in enumerate(self.stages):
@@ -176,7 +179,8 @@ class ConvBNLayer(nn.Layer):
             padding=padding,
             groups=groups,
             weight_attr=ParamAttr(name=name + '_weights'),
-            bias_attr=False)
+            bias_attr=False,
+        )
 
         self.bn = nn.BatchNorm(
             num_channels=out_channels,
@@ -184,7 +188,8 @@ class ConvBNLayer(nn.Layer):
             param_attr=ParamAttr(name=name + "_bn_scale"),
             bias_attr=ParamAttr(name=name + "_bn_offset"),
             moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance")
+            moving_variance_name=name + "_bn_variance",
+        )
 
     def forward(self, x):
         x = self.conv(x)
@@ -202,15 +207,17 @@ class ConvBNLayer(nn.Layer):
 
 
 class ResidualUnit(nn.Layer):
-    def __init__(self,
-                 in_channels,
-                 mid_channels,
-                 out_channels,
-                 kernel_size,
-                 stride,
-                 use_se,
-                 act=None,
-                 name=''):
+    def __init__(
+        self,
+        in_channels,
+        mid_channels,
+        out_channels,
+        kernel_size,
+        stride,
+        use_se,
+        act=None,
+        name='',
+    ):
         super(ResidualUnit, self).__init__()
         self.if_shortcut = stride == 1 and in_channels == out_channels
         self.if_se = use_se
@@ -223,7 +230,8 @@ class ResidualUnit(nn.Layer):
             padding=0,
             if_act=True,
             act=act,
-            name=name + "_expand")
+            name=name + "_expand",
+        )
         self.bottleneck_conv = ConvBNLayer(
             in_channels=mid_channels,
             out_channels=mid_channels,
@@ -233,7 +241,8 @@ class ResidualUnit(nn.Layer):
             groups=mid_channels,
             if_act=True,
             act=act,
-            name=name + "_depthwise")
+            name=name + "_depthwise",
+        )
         if self.if_se:
             self.mid_se = SEModule(mid_channels, name=name + "_se")
         self.linear_conv = ConvBNLayer(
@@ -244,7 +253,8 @@ class ResidualUnit(nn.Layer):
             padding=0,
             if_act=False,
             act=None,
-            name=name + "_linear")
+            name=name + "_linear",
+        )
 
     def forward(self, inputs):
         x = self.expand_conv(inputs)
@@ -268,7 +278,8 @@ class SEModule(nn.Layer):
             stride=1,
             padding=0,
             weight_attr=ParamAttr(name=name + "_1_weights"),
-            bias_attr=ParamAttr(name=name + "_1_offset"))
+            bias_attr=ParamAttr(name=name + "_1_offset"),
+        )
         self.conv2 = nn.Conv2D(
             in_channels=in_channels // reduction,
             out_channels=in_channels,
@@ -276,7 +287,8 @@ class SEModule(nn.Layer):
             stride=1,
             padding=0,
             weight_attr=ParamAttr(name + "_2_weights"),
-            bias_attr=ParamAttr(name=name + "_2_offset"))
+            bias_attr=ParamAttr(name=name + "_2_offset"),
+        )
 
     def forward(self, inputs):
         outputs = self.avg_pool(inputs)

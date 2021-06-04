@@ -3,7 +3,7 @@ Global:
   epoch_num: 500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/nb
+  save_model_dir: ./checkpoint/nb_v3m
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 500]
@@ -19,7 +19,7 @@ Global:
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/nb.txt
+  save_res_path: ./output/rec/nb_v3m.txt
 
 
 Optimizer:
@@ -39,10 +39,13 @@ Architecture:
   algorithm: CRNN
   Transform:
   Backbone:
-    name: MobileNetV3
+    name: MobileNetV3M
     scale: 0.5
     model_name: small
     small_stride: [1, 2, 2, 2]
+    overwrite_act: swish
+    force_shortcut: True
+    act_residual: True
   Neck:
     name: SequenceEncoder
     encoder_type: rnn

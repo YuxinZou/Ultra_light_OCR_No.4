@@ -23,9 +23,10 @@ def build_backbone(config, model_type):
         support_dict = ['MobileNetV3', 'ResNet', 'ResNet_SAST']
     elif model_type == 'rec' or model_type == 'cls':
         from .rec_mobilenet_v3 import MobileNetV3
+        from .rec_mobilenet_v3m import MobileNetV3M
         from .rec_resnet_vd import ResNet
         from .rec_resnet_fpn import ResNetFPN
-        support_dict = ['MobileNetV3', 'ResNet', 'ResNetFPN']
+        support_dict = ['MobileNetV3', 'MobileNetV3M', 'ResNet', 'ResNetFPN']
     elif model_type == 'e2e':
         from .e2e_resnet_vd_pg import ResNet
         support_dict = ['ResNet']

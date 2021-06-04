@@ -14,7 +14,11 @@
 
 from paddle import nn
 
-from ppocr.modeling.backbones.det_mobilenet_v3 import ResidualUnit, ConvBNLayer, make_divisible
+from ppocr.modeling.backbones.det_mobilenet_v3 import (
+    ResidualUnit,
+    ConvBNLayer,
+    make_divisible,
+)
 
 __all__ = ['MobileNetV3']
 
@@ -34,14 +38,14 @@ class MobileNetV3(nn.Layer):
         if large_stride is None:
             large_stride = [1, 2, 2, 2]
 
-        assert isinstance(large_stride, list), "large_stride type must " \
-                                               "be list but got {}".format(type(large_stride))
-        assert isinstance(small_stride, list), "small_stride type must " \
-                                               "be list but got {}".format(type(small_stride))
-        assert len(large_stride) == 4, "large_stride length must be " \
-                                       "4 but got {}".format(len(large_stride))
-        assert len(small_stride) == 4, "small_stride length must be " \
-                                       "4 but got {}".format(len(small_stride))
+        assert isinstance(large_stride, list), \
+            f"large_stride type must be list but got {type(large_stride)}"
+        assert isinstance(small_stride, list), \
+            f"small_stride type must be list but got {type(small_stride)}"
+        assert len(large_stride) == 4, \
+            f"large_stride length must be 4 but got {len(large_stride)}"
+        assert len(small_stride) == 4, \
+            f"small_stride length must be 4 but got {len(small_stride)}"
 
         if model_name == "large":
             cfg = [
@@ -84,49 +88,48 @@ class MobileNetV3(nn.Layer):
                                       "_model] is not implemented!")
 
         supported_scale = [0.35, 0.5, 0.75, 1.0, 1.25]
-        assert scale in supported_scale, \
-            "supported scales are {} but input scale is {}".format(supported_scale, scale)
+        assert scale in supported_scale, (
+            f'supported scales are {supported_scale} '
+            f'but input scale is {scale}')
 
         inplanes = 16
         # conv1
-        self.conv1 = ConvBNLayer(
-            in_channels=in_channels,
-            out_channels=make_divisible(inplanes * scale),
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            groups=1,
-            if_act=True,
-            act='hardswish',
-            name='conv1')
+        self.conv1 = ConvBNLayer(in_channels=in_channels,
+                                 out_channels=make_divisible(inplanes * scale),
+                                 kernel_size=3,
+                                 stride=2,
+                                 padding=1,
+                                 groups=1,
+                                 if_act=True,
+                                 act='hardswish',
+                                 name='conv1')
         i = 0
         block_list = []
         inplanes = make_divisible(inplanes * scale)
         for (k, exp, c, se, nl, s) in cfg:
             block_list.append(
-                ResidualUnit(
-                    in_channels=inplanes,
-                    mid_channels=make_divisible(scale * exp),
-                    out_channels=make_divisible(scale * c),
-                    kernel_size=k,
-                    stride=s,
-                    use_se=se,
-                    act=nl,
-                    name='conv' + str(i + 2)))
+                ResidualUnit(in_channels=inplanes,
+                             mid_channels=make_divisible(scale * exp),
+                             out_channels=make_divisible(scale * c),
+                             kernel_size=k,
+                             stride=s,
+                             use_se=se,
+                             act=nl,
+                             name='conv' + str(i + 2)))
             inplanes = make_divisible(scale * c)
             i += 1
         self.blocks = nn.Sequential(*block_list)
 
-        self.conv2 = ConvBNLayer(
-            in_channels=inplanes,
-            out_channels=make_divisible(scale * cls_ch_squeeze),
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            groups=1,
-            if_act=True,
-            act='hardswish',
-            name='conv_last')
+        self.conv2 = ConvBNLayer(in_channels=inplanes,
+                                 out_channels=make_divisible(scale *
+                                                             cls_ch_squeeze),
+                                 kernel_size=1,
+                                 stride=1,
+                                 padding=0,
+                                 groups=1,
+                                 if_act=True,
+                                 act='hardswish',
+                                 name='conv_last')
 
         if last_pool is None:
             self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
