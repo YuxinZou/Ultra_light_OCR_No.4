@@ -109,7 +109,6 @@ class MobileNetV3M(nn.Layer):
             out_channels=make_divisible(inplanes * scale),
             kernel_size=3,
             stride=2,
-            padding=1,
             groups=1,
             if_act=True,
             act=overwrite_act if overwrite_act else 'hardswish',
@@ -142,7 +141,6 @@ class MobileNetV3M(nn.Layer):
             out_channels=make_divisible(scale * cls_ch_squeeze),
             kernel_size=1,
             stride=1,
-            padding=0,
             groups=1,
             if_act=True,
             act=overwrite_act if overwrite_act else 'hardswish',
@@ -210,7 +208,6 @@ class ResidualUnit(nn.Layer):
             out_channels=mid_channels,
             kernel_size=1,
             stride=1,
-            padding=0,
             if_act=True,
             act=act,
             name=name + "_expand",
@@ -220,7 +217,6 @@ class ResidualUnit(nn.Layer):
             out_channels=mid_channels,
             kernel_size=kernel_size,
             stride=stride,
-            padding=int((kernel_size - 1) // 2),
             groups=mid_channels,
             if_act=True,
             act=act,
@@ -237,7 +233,6 @@ class ResidualUnit(nn.Layer):
             out_channels=out_channels,
             kernel_size=1,
             stride=1,
-            padding=0,
             if_act=False,
             act=None,
             name=name + "_linear",
@@ -280,6 +275,9 @@ class SEModule(nn.Layer):
         act='default',
     ):
         super(SEModule, self).__init__()
+
+        self.act = act
+
         self.avg_pool = nn.AdaptiveAvgPool2D(1)
         self.conv1 = nn.Conv2D(
             in_channels=in_channels,
@@ -301,19 +299,24 @@ class SEModule(nn.Layer):
         )
         if act == 'default':
             self.act1 = nn.ReLU()
-            self.act2 = nn.Hardswish()
-        elif act == 'swish':
-            self.act1 = nn.Swish()
-            self.act2 = nn.Swish()
+            self.act2 = nn.Hardsigmoid()
         else:
-            raise ValueError(f'act layer: {act} is not yet supported!')
+            self.act2 = nn.Sigmoid()
+            if act == 'swish':
+                self.act1 = nn.Swish()
+            else:
+                raise ValueError(f'act layer: {act} is not yet supported!')
 
     def forward(self, inputs):
         outputs = self.avg_pool(inputs)
         outputs = self.conv1(outputs)
         outputs = self.act1(outputs)
         outputs = self.conv2(outputs)
-        outputs = self.act2(outputs, slope=0.2, offset=0.5)
+        if self.act == 'default':
+            outputs = self.act2(outputs, slope=0.2, offset=0.5)
+        else:
+            self.act(outputs)
+
         return inputs * outputs
 
 
