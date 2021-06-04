@@ -24,14 +24,16 @@ __all__ = ['MobileNetV3']
 
 
 class MobileNetV3(nn.Layer):
-    def __init__(self,
-                 in_channels=3,
-                 model_name='small',
-                 scale=0.5,
-                 large_stride=None,
-                 small_stride=None,
-                 last_pool=None,
-                 **kwargs):
+    def __init__(
+        self,
+        in_channels=3,
+        model_name='small',
+        scale=0.5,
+        large_stride=None,
+        small_stride=None,
+        last_pool=None,
+        **kwargs,
+    ):
         super(MobileNetV3, self).__init__()
         if small_stride is None:
             small_stride = [2, 2, 2, 2]
@@ -94,42 +96,47 @@ class MobileNetV3(nn.Layer):
 
         inplanes = 16
         # conv1
-        self.conv1 = ConvBNLayer(in_channels=in_channels,
-                                 out_channels=make_divisible(inplanes * scale),
-                                 kernel_size=3,
-                                 stride=2,
-                                 padding=1,
-                                 groups=1,
-                                 if_act=True,
-                                 act='hardswish',
-                                 name='conv1')
+        self.conv1 = ConvBNLayer(
+            in_channels=in_channels,
+            out_channels=make_divisible(inplanes * scale),
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            groups=1,
+            if_act=True,
+            act='hardswish',
+            name='conv1',
+        )
         i = 0
         block_list = []
         inplanes = make_divisible(inplanes * scale)
         for (k, exp, c, se, nl, s) in cfg:
             block_list.append(
-                ResidualUnit(in_channels=inplanes,
-                             mid_channels=make_divisible(scale * exp),
-                             out_channels=make_divisible(scale * c),
-                             kernel_size=k,
-                             stride=s,
-                             use_se=se,
-                             act=nl,
-                             name='conv' + str(i + 2)))
+                ResidualUnit(
+                    in_channels=inplanes,
+                    mid_channels=make_divisible(scale * exp),
+                    out_channels=make_divisible(scale * c),
+                    kernel_size=k,
+                    stride=s,
+                    use_se=se,
+                    act=nl,
+                    name='conv' + str(i + 2),
+                ))
             inplanes = make_divisible(scale * c)
             i += 1
         self.blocks = nn.Sequential(*block_list)
 
-        self.conv2 = ConvBNLayer(in_channels=inplanes,
-                                 out_channels=make_divisible(scale *
-                                                             cls_ch_squeeze),
-                                 kernel_size=1,
-                                 stride=1,
-                                 padding=0,
-                                 groups=1,
-                                 if_act=True,
-                                 act='hardswish',
-                                 name='conv_last')
+        self.conv2 = ConvBNLayer(
+            in_channels=inplanes,
+            out_channels=make_divisible(scale * cls_ch_squeeze),
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            groups=1,
+            if_act=True,
+            act='hardswish',
+            name='conv_last',
+        )
 
         if last_pool is None:
             self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
