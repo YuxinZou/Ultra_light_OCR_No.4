@@ -48,7 +48,7 @@ Architecture:
       kernel_size: 3
       stride: 3
       padding: 0
-    # overwrite_act: swish
+    overwrite_act: swish
     # force_shortcut: True
     # act_residual: True
   Neck:
