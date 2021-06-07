@@ -78,6 +78,26 @@ class MobileNetV3M(nn.Layer):
                 [5, 960, 160, True, 'hardswish', 1],
             ]
             cls_ch_squeeze = 960
+        elif model_name == "large_m":
+            cfg = [
+                # k, exp, c,  se,     nl,  s,
+                [3, 16, 16, False, 'relu', large_stride[0]],
+                [3, 64, 24, False, 'relu', (large_stride[1], 1)],
+                [3, 72, 24, False, 'relu', 1],
+                [5, 72, 40, True, 'relu', (large_stride[2], 1)],
+                [5, 120, 40, True, 'relu', 1],
+                [5, 120, 40, True, 'relu', 1],
+                [3, 240, 80, False, 'hardswish', 1],
+                [3, 200, 80, False, 'hardswish', 1],
+                [3, 184, 80, False, 'hardswish', 1],
+                [3, 184, 80, False, 'hardswish', 1],
+                [3, 480, 112, True, 'hardswish', 1],
+                [3, 672, 112, True, 'hardswish', 1],
+                [5, 672, 160, True, 'hardswish', (large_stride[3], 1)],
+                [5, 960, 160, True, 'hardswish', 1],
+                [5, 960, 160, True, 'hardswish', 1],
+            ]
+            cls_ch_squeeze = 960
         elif model_name == "small":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
@@ -183,22 +203,27 @@ class ResidualUnit(nn.Layer):
 
         if force_shortcut:
             self.if_shortcut = True
-            self.short = nn.Sequential(
-                nn.AvgPool2D(
+            short_list = []
+            if stride > 1:
+                short_list.append(nn.AvgPool2D(
                     kernel_size=stride,
                     stride=stride,
                     padding=0,
                     ceil_mode=True,
-                ),
-                ConvBNLayer(
+                ))
+            if in_channels != out_channels:
+                short_list.append(ConvBNLayer(
                     in_channels=in_channels,
                     out_channels=out_channels,
                     kernel_size=1,
                     stride=1,
                     if_act=False,
                     name=name + '_short_conv',
-                ),
-            )
+                ))
+            if short_list:
+                self.short = nn.Sequential(*short_list)
+            else:
+                self.short = None
         else:
             self.if_shortcut = stride == 1 and in_channels == out_channels
             self.short = None
