@@ -204,7 +204,10 @@ class ResidualUnit(nn.Layer):
         if force_shortcut:
             self.if_shortcut = True
             short_list = []
-            if stride > 1:
+            if (
+                (isinstance(stride, tuple) and max(stride) > 1) or
+                (not isinstance(stride, tuple) and stride > 1)
+            ):
                 short_list.append(nn.AvgPool2D(
                     kernel_size=stride,
                     stride=stride,
