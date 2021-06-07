@@ -3,7 +3,7 @@ Global:
   epoch_num: 1000
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/nb_48_480_MNetM_GaussNoise_MotionBlur_ColorJitter_trainvalkeys
+  save_model_dir: ./checkpoint/nb_48_480_MNetM2_GaussNoise_MotionBlur_ColorJitter
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 10000]
@@ -15,12 +15,12 @@ Global:
   use_visualdl: False
   infer_img: doc/imgs_words/ch/word_1.jpg
   # for data or label process
-  character_dict_path: ppocr/utils/ppocr_keys_trainval.txt
+  character_dict_path: ppocr/utils/ppocr_keys_new.txt
   character_type: ch
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/nb_48_480_MNetM_GaussNoise_MotionBlur_ColorJitter_trainvalkeys.txt
+  save_res_path: ./output/rec/nb_48_480_MNetM2_GaussNoise_MotionBlur_ColorJitter.txt
 
 
 Optimizer:
@@ -48,10 +48,9 @@ Architecture:
       kernel_size: 3
       stride: 3
       padding: 0
-    overwrite_act: swish
-    force_shortcut: True
-    act_residual: True
-
+    # overwrite_act: swish
+    # force_shortcut: True
+    # act_residual: True
   Neck:
     name: SequenceEncoder
     encoder_type: rnn
