@@ -15,6 +15,7 @@
 import paddle
 from paddle import nn
 from paddle import ParamAttr
+from paddle.nn import functional as F
 
 __all__ = ['MobileNetV3M']
 
@@ -299,11 +300,11 @@ class SEModule(nn.Layer):
             self.act1 = nn.ReLU()
             self.act2 = nn.Hardsigmoid()
         else:
-            self.act2 = nn.Sigmoid()
             if act == 'swish':
                 self.act1 = nn.Swish()
             else:
                 raise ValueError(f'act layer: {act} is not yet supported!')
+            self.act2 = nn.Sigmoid()
 
     def forward(self, inputs):
         outputs = self.avg_pool(inputs)
@@ -311,7 +312,8 @@ class SEModule(nn.Layer):
         outputs = self.act1(outputs)
         outputs = self.conv2(outputs)
         if self.act == 'default':
-            outputs = self.act2(outputs, slope=0.2, offset=0.5)
+            # because stupid paddle doesn't support forward kwargs
+            outputs = F.hardsigmoid(outputs, slope=0.2, offset=0.5)
         else:
             self.act2(outputs)
 
