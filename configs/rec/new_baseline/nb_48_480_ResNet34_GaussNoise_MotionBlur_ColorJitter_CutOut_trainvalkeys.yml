@@ -1,0 +1,153 @@
+Global:
+  use_gpu: true
+  epoch_num: 1500
+  log_smooth_window: 20
+  print_batch_step: 10
+  save_model_dir: ./checkpoint/nb_48_480_ResNet34_GaussNoise_MotionBlur_ColorJitter_CutOut_trainvalkeys
+  save_epoch_step: 5
+  # evaluation is run every 5000 iterations after the 4000th iteration
+  eval_batch_step: [0, 10000]
+  eval_epoch_step: 1
+  cal_metric_during_train: True
+  pretrained_model:
+  checkpoints: 
+  save_inference_dir:
+  use_visualdl: False
+  infer_img: doc/imgs_words/ch/word_1.jpg
+  # for data or label process
+  character_dict_path: ppocr/utils/ppocr_keys_trainval.txt
+  character_type: ch
+  max_text_length: 25
+  infer_mode: False
+  use_space_char: False
+  save_res_path: ./output/rec/nb_48_480_ResNet34_GaussNoise_MotionBlur_ColorJitter_CutOut_trainvalkeys.txt
+
+
+Optimizer:
+  name: Adam
+  beta1: 0.9
+  beta2: 0.999
+  lr:
+    name: CyclicalCosine
+    learning_rate: 0.002
+    cycle: 50
+  regularizer:
+    name: 'L2'
+    factor: 0.00001
+
+Architecture:
+  model_type: rec
+  algorithm: CRNN
+  Transform:
+  Backbone:
+    name: ResNet
+    layers: 34
+    last_pool:
+      kernel_size: 3
+      stride: 3
+      padding: 0
+  Neck:
+    name: SequenceEncoder
+    encoder_type: rnn
+    hidden_size: 256
+  Head:
+    name: CTCHead
+    fc_decay: 0.00004
+
+Loss:
+  name: CTCLoss
+
+PostProcess:
+  name: CTCLabelDecode
+
+Metric:
+  name: RecMetric
+  main_indicator: acc
+
+Train:
+  dataset:
+    name: SimpleDataSet
+    data_dir: ./data/train_data/TrainImages/
+    label_file_list: ["./data/train_data/train.txt"]
+    transforms:
+      - DecodeImage: # load image
+          img_mode: BGR
+          channel_first: False
+      # - RecAug:
+      - Imau:
+          transforms:
+            - typename: Sometimes
+              p: 0.5
+              then_list:
+                - typename: Cutout
+                  nb_iterations: [1, 3]
+                  size: [0.1, 0.2]
+                  squared: False
+                  fill_mode: constant
+                  cval: [0, 255]
+                  fill_per_channel: True
+      - Tia:
+          aug_prob: 0.4
+          distort: True
+          stretch: True
+          perspective: True
+          size_thres: [20, 20]
+      - HeightCrop:
+          aug_prob: 0.4
+          size_thres: [20, 20]
+          top_range: [1, 8]
+      - Iaa_AdditiveGaussianNoise:
+          aug_prob: 0.5
+          loc: 0
+          scale: [0, 25.5]
+          per_channel: True
+      - Iaa_MotionBlur:
+          aug_prob: 0.5
+          k: [3, 7]
+          angle: [0, 360]
+          direction: [-1.0, 1.0]
+          order: 1
+      - Albu:
+          transforms:
+            - typename: ColorJitter
+              brightness: 0.2
+              contrast: 0.2
+              saturation: 0.2
+              hue: 0.2
+              p: 0.5
+      - ShiftJitter:
+          aug_prob: 1.0
+          size_thres: [10, 10]
+          shift_control: 0.01
+      - PixelReverse:
+          aug_prob: 0.4
+      - CTCLabelEncode: # Class handling label
+      - RecResizeImg:
+          image_shape: [3, 48, 480]
+      - KeepKeys:
+          keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
+  loader:
+    shuffle: True
+    batch_size_per_card: 64
+    drop_last: True
+    num_workers: 8
+
+Eval:
+  dataset:
+    name: SimpleDataSet
+    data_dir: ./data/train_data/TrainImages/
+    label_file_list: ["./data/train_data/val.txt"]
+    transforms:
+      - DecodeImage: # load image
+          img_mode: BGR
+          channel_first: False
+      - CTCLabelEncode: # Class handling label
+      - RecResizeImg:
+          image_shape: [3, 48, 480]
+      - KeepKeys:
+          keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
+  loader:
+    shuffle: False
+    drop_last: False
+    batch_size_per_card: 64
+    num_workers: 8

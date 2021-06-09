@@ -174,7 +174,7 @@ class BasicBlock(nn.Layer):
 
 
 class ResNet(nn.Layer):
-    def __init__(self, in_channels=3, layers=50, **kwargs):
+    def __init__(self, in_channels=3, layers=50, last_pool=None, **kwargs):
         super(ResNet, self).__init__()
 
         self.layers = layers
@@ -273,7 +273,11 @@ class ResNet(nn.Layer):
                     shortcut = True
                     self.block_list.append(basic_block)
                 self.out_channels = num_filters[block]
-        self.out_pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+        
+        if last_pool is None:
+            self.out_pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+        else:
+            self.out_pool = nn.MaxPool2D(**last_pool)
 
     def forward(self, inputs):
         y = self.conv1_1(inputs)
