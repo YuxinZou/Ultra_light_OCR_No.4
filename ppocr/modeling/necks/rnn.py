@@ -46,7 +46,7 @@ class EncoderWithRNN(nn.Layer):
         return x
 
 
-class EncoderWithGRU(nn.layer):
+class EncoderWithGRU(nn.Layer):
     def __init__(self, in_channels, hidden_size):
         super(EncoderWithGRU, self).__init__()
         self.out_channels = hidden_size * 2
