@@ -40,6 +40,7 @@ class MobileNetV3M(nn.Layer):
         last_pool=None,
         overwrite_act=None,
         force_shortcut=False,
+        force_se=False,
         act_residual=False,
         **kwargs,
     ):
@@ -146,7 +147,7 @@ class MobileNetV3M(nn.Layer):
                     out_channels=make_divisible(scale * c),
                     kernel_size=k,
                     stride=s,
-                    use_se=se,
+                    use_se=True if force_se else se,
                     act=overwrite_act if overwrite_act else nl,
                     se_act=overwrite_act if overwrite_act else 'default',
                     force_shortcut=force_shortcut,
