@@ -274,15 +274,18 @@ class RecResizeImg(object):
                  image_shape,
                  infer_mode=False,
                  character_type='ch',
+                 pad_w=False,
                  **kwargs):
         self.image_shape = image_shape
         self.infer_mode = infer_mode
         self.character_type = character_type
+        self.pad_w = pad_w
 
     def __call__(self, data):
         img = data['image']
         if self.infer_mode and self.character_type == "ch":
-            norm_img = resize_norm_img_chinese(img, self.image_shape)
+            norm_img = resize_norm_img_chinese(img, self.image_shape,
+                                               pad_w=self.pad_w)
         else:
             norm_img = resize_norm_img(img, self.image_shape)
         data['image'] = norm_img
@@ -334,14 +337,17 @@ def resize_norm_img(img, image_shape):
     return padding_im
 
 
-def resize_norm_img_chinese(img, image_shape):
+def resize_norm_img_chinese(img, image_shape, pad_w):
     imgC, imgH, imgW = image_shape
     # todo: change to 0 and modified image shape
     max_wh_ratio = imgW * 1.0 / imgH
     h, w = img.shape[0], img.shape[1]
     ratio = w * 1.0 / h
     max_wh_ratio = max(max_wh_ratio, ratio)
-    imgW = int(imgH * max_wh_ratio)
+    if pad_w:
+        imgW = int(np.ceil(imgH * max_wh_ratio/4)*4)
+    else:
+        imgW = int(np.floor(imgH * max_wh_ratio/4)*4)
     if math.ceil(imgH * ratio) > imgW:
         resized_w = imgW
     else:
