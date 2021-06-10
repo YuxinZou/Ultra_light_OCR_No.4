@@ -21,7 +21,7 @@ Global:
   infer_mode: False
   use_space_char: False
   save_res_path: ./output/rec/nb_48_480_LMNet_GaussNoise_MotionBlur_ColorJitter_CutOut_trainvalkeys.txt
-
+  test_time_suppress_pad: False
 
 Optimizer:
   name: Adam
@@ -149,6 +149,7 @@ Eval:
       - CTCLabelEncode: # Class handling label
       - RecResizeImg:
           image_shape: [3, 48, 480]
+          pad_w: False
       - KeepKeys:
           keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
   loader:

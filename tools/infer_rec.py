@@ -60,6 +60,8 @@ def main():
         if 'Label' in op_name:
             continue
         elif op_name in ['RecResizeImg']:
+            if config['Global'].get('test_time_suppress_pad'):
+                op[op_name]['image_shape'][-1] = 1  # let image decide width
             op[op_name]['infer_mode'] = True
         elif op_name == 'KeepKeys':
             if config['Architecture']['algorithm'] == "SRN":
