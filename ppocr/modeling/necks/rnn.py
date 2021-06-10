@@ -46,6 +46,18 @@ class EncoderWithRNN(nn.Layer):
         return x
 
 
+class EncoderWithGRU(nn.Layer):
+    def __init__(self, in_channels, hidden_size):
+        super(EncoderWithGRU, self).__init__()
+        self.out_channels = hidden_size * 2
+        self.gru = nn.GRU(
+            in_channels, hidden_size, direction='bidirectional', num_layers=2)
+
+    def forward(self, x):
+        x, _ = self.gru(x)
+        return x
+
+
 class EncoderWithFC(nn.Layer):
     def __init__(self, in_channels, hidden_size):
         super(EncoderWithFC, self).__init__()
@@ -75,7 +87,8 @@ class SequenceEncoder(nn.Layer):
             support_encoder_dict = {
                 'reshape': Im2Seq,
                 'fc': EncoderWithFC,
-                'rnn': EncoderWithRNN
+                'rnn': EncoderWithRNN,
+                'gru': EncoderWithGRU,
             }
             assert encoder_type in support_encoder_dict, '{} must in {}'.format(
                 encoder_type, support_encoder_dict.keys())
