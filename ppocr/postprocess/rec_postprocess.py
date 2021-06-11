@@ -16,10 +16,12 @@ from abc import ABCMeta, abstractmethod
 
 import numpy as np
 import paddle
+from queue import PriorityQueue
 
 
 class BaseRecLabelDecode(metaclass=ABCMeta):
     """ Convert between text-label and text-index """
+
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -85,7 +87,7 @@ class BaseRecLabelDecode(metaclass=ABCMeta):
                 if is_remove_duplicate:
                     # only for predict
                     if idx > 0 and text_index[batch_idx][
-                            idx - 1] == text_index[batch_idx][idx]:
+                        idx - 1] == text_index[batch_idx][idx]:
                         continue
                 char_list.append(self.character[int(
                     text_index[batch_idx][idx])])
@@ -101,8 +103,104 @@ class BaseRecLabelDecode(metaclass=ABCMeta):
         return [0]  # for ctc blank
 
 
+class DecodeNode:
+    def __init__(self, indexes=[0], scores=[0.0]):
+        self.indexes = indexes
+        self.scores = scores
+
+    def eval(self):
+        """Calculate accumulated score."""
+        accu_score = sum(self.scores)
+        return accu_score
+
+
+class CTCLabelBeamSearchDecode(BaseRecLabelDecode):
+    """ Convert between text-label and text-index """
+
+    def __init__(self,
+                 character_dict_path=None,
+                 character_type='ch',
+                 use_space_char=False,
+                 beam_width=2,
+                 **kwargs):
+        super(CTCLabelBeamSearchDecode, self).__init__(character_dict_path,
+                                                       character_type,
+                                                       use_space_char)
+        self.beam_width = beam_width
+
+    def __call__(self, preds, label=None, is_remove_duplicate=True, *args,
+                 **kwargs):
+        # preds shape: B * T * C
+        B, T, C = preds.shape
+        result_list = []
+        ignored_tokens = self.get_ignored_tokens()
+        for batch_idx in range(B):
+            char_list = []
+            conf_list = []
+            q = PriorityQueue()
+            init_node = DecodeNode([0], [0.0])
+            q.put((-init_node.eval(), init_node))
+            for idx in range(1, 1 + len(preds[batch_idx])):
+                next_nodes = []
+                beam_width = self.beam_width if idx > 1 else 1
+                # print(f'beam_width:{beam_width}')
+                for _ in range(beam_width):
+                    _, node = q.get()
+                    # print(node.indexes, node.scores)
+                    output_char = preds[batch_idx][idx - 1, :]  # bsz * num_classes
+                    topk_value, topk_idx = output_char.topk(self.beam_width)
+                    # print(topk_value, topk_idx)
+                    for k in range(self.beam_width):
+                        kth_score = float(topk_value[k].numpy())
+                        kth_idx = int(topk_idx[k].numpy())
+                        next_node = DecodeNode(node.indexes + [kth_idx],
+                                               node.scores + [kth_score])
+                        # print(next_node.indexes, next_node.scores)
+                        delta = k * 1e-6
+                        # next_nodes.append(
+                        #     (-node.eval() - kth_score - delta, next_node))
+                        next_nodes.append(
+                            (-node.eval() + np.log(kth_score) - delta, next_node))
+                        # Use minus since priority queue sort
+                        # with ascending order
+                    # print("######")
+                while not q.empty():
+                    q.get()
+                for next_node in next_nodes:
+                    q.put(next_node)
+            best_node = q.get()
+            indexes = best_node[1].indexes[1:]
+            scores = best_node[1].scores[1:]
+
+            for idx in range(len(indexes)):
+                if indexes[idx] in ignored_tokens:
+                    continue
+                if is_remove_duplicate:
+                    # only for predict
+                    if idx > 0 and indexes[idx - 1] == indexes[idx]:
+                        continue
+                # print(idx)
+                char_list.append(self.character[int(
+                    indexes[idx])])
+                if conf_list is not None:
+                    conf_list.append(scores[idx])
+                else:
+                    conf_list.append(1)
+            text = ''.join(char_list)
+            result_list.append((text, np.mean(conf_list)))
+        if label is None:
+            return result_list
+        label = self.decode(label)
+        return result_list, label
+
+    def add_special_char(self, dict_character):
+        dict_character = ['blank'] + dict_character
+        return dict_character
+
+
 class CTCLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
+
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -129,6 +227,7 @@ class CTCLabelDecode(BaseRecLabelDecode):
 
 class AttnLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
+
     def __init__(self,
                  character_dict_path=None,
                  character_type='ch',
@@ -161,7 +260,7 @@ class AttnLabelDecode(BaseRecLabelDecode):
                 if is_remove_duplicate:
                     # only for predict
                     if idx > 0 and text_index[batch_idx][
-                            idx - 1] == text_index[batch_idx][idx]:
+                        idx - 1] == text_index[batch_idx][idx]:
                         continue
                 char_list.append(self.character[int(
                     text_index[batch_idx][idx])])
@@ -211,6 +310,7 @@ class AttnLabelDecode(BaseRecLabelDecode):
 
 class SRNLabelDecode(BaseRecLabelDecode):
     """ Convert between text-label and text-index """
+
     def __init__(self,
                  character_dict_path=None,
                  character_type='en',
@@ -257,7 +357,7 @@ class SRNLabelDecode(BaseRecLabelDecode):
                 if is_remove_duplicate:
                     # only for predict
                     if idx > 0 and text_index[batch_idx][
-                            idx - 1] == text_index[batch_idx][idx]:
+                        idx - 1] == text_index[batch_idx][idx]:
                         continue
                 char_list.append(self.character[int(
                     text_index[batch_idx][idx])])
