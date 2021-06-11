@@ -160,7 +160,7 @@ class CTCLabelBeamSearchDecode(BaseRecLabelDecode):
                         # next_nodes.append(
                         #     (-node.eval() - kth_score - delta, next_node))
                         next_nodes.append(
-                            (-node.eval() + np.log(kth_score) - delta, next_node))
+                            (-node.eval() - np.log(kth_score) - delta, next_node))
                         # Use minus since priority queue sort
                         # with ascending order
                     # print("######")
