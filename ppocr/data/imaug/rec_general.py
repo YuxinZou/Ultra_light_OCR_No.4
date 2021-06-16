@@ -1,6 +1,6 @@
 # Modified from mmlab
 import random
-from typing import Union, Tuple, List, Dict
+from typing import Optional, Union, Tuple, List, Dict
 
 import cv2
 import numpy as np
@@ -11,6 +11,7 @@ import imgaug.augmenters as iaa
 __all__ = [
     'Imau',
     'Albu',
+    'HeightRatioCrop',
     'Resize',
     'ToFloat',
     'Normalize',
@@ -156,6 +157,37 @@ class Albu:
         return repr_str
 
 
+class HeightRatioCrop:
+    def __init__(
+        self,
+        aug_prob: float = 0.4,
+        crop_ratio: Union[Tuple, List] = (0, 0.1),
+        **kwargs,
+    ) -> None:
+        self.aug_prob = aug_prob
+        self.crop_ratio = crop_ratio
+
+    def __call__(self, data):
+        img = data['image']
+        h, w, _ = img.shape
+        crop_range = list(map(lambda x: int(x*h), self.crop_ratio))
+        crop_px = random.randint(*crop_range)
+        if random.randint(0, 1):
+            cropped = img[crop_px: h, ...]
+        else:
+            cropped = img[0: h - crop_px, ...]
+        data['image'] = cropped
+
+        return data
+
+    def __repr__(self) -> str:
+        kwargs = ', '.join([
+            f'aug_prob={self.aug_prob}',
+            f'crop_ratio={self.crop_ratio}',
+        ])
+        return f'{self.__class__.__name__}({kwargs})'
+
+
 class Resize:
     """ Resize images.
 
@@ -238,16 +270,16 @@ class ToFloat:
 class Normalize:
     def __init__(
         self,
-        mean: List[int, float],
-        std: List[int, float],
+        mean: List[Union[int, float]],
+        std: List[Union[int, float]],
         is_rgb: bool = False,
         **kwargs,
     ) -> None:
         if is_rgb:
             mean = mean[::-1]
             std = std[::-1]
-        self.mean = np.array(mean).float()
-        self.std = np.array(std).float()
+        self.mean = np.array(mean, dtype=np.float32)
+        self.std = np.array(std, dtype=np.float32)
         self.is_rgb = is_rgb
 
     def __call__(self, data: Dict) -> Dict:
@@ -270,8 +302,8 @@ class Pad:
     """ Pad in (h, w, c) order. """
     def __init__(
         self,
-        target_scale: Tuple[int],
-        use_record_target_scale: bool,
+        target_scale: Optional[Tuple[int]] = None,
+        use_record_target_scale: bool = True,
         **kwargs,
     ) -> None:
         assert bool(target_scale) ^ bool(use_record_target_scale), \
@@ -286,7 +318,7 @@ class Pad:
             w, h = data['target_scale']
         else:
             w, h = self.target_scale
-        canvas = np.zeros((h, w, c), dtype=np.float32)
+        canvas = np.zeros((h, w, c), dtype=data['image'].dtype)
         canvas[:orig_h, :orig_w, :] = data['image']
         data['image'] = canvas
 

@@ -25,6 +25,7 @@ from .random_crop_data import EastRandomCropData, PSERandomCrop
 from .rec_general import (
     Albu,
     Imau,
+    HeightRatioCrop,
     Resize,
     ToFloat,
     Normalize,

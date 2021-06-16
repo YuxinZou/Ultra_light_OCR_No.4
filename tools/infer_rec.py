@@ -57,21 +57,21 @@ def main():
     transforms = []
     # for op in config['Eval']['dataset']['transforms']:
     for op in config['Test']['transforms']:
-        op_name = list(op)[0]
-        if 'Label' in op_name:
-            continue
-        elif op_name in ['RecResizeImg']:
-            if config['Global'].get('test_time_suppress_pad'):
-                op[op_name]['image_shape'][-1] = 1  # let image decide width
-            op[op_name]['infer_mode'] = True
-        elif op_name == 'KeepKeys':
-            if config['Architecture']['algorithm'] == "SRN":
-                op[op_name]['keep_keys'] = [
-                    'image', 'encoder_word_pos', 'gsrm_word_pos',
-                    'gsrm_slf_attn_bias1', 'gsrm_slf_attn_bias2'
-                ]
-            # else:
-            #     op[op_name]['keep_keys'] = ['image']
+        # op_name = list(op)[0]
+        # if 'Label' in op_name:
+        #     continue
+        # elif op_name in ['RecResizeImg']:
+        #     if config['Global'].get('test_time_suppress_pad'):
+        #         op[op_name]['image_shape'][-1] = 1  # let image decide width
+        #     op[op_name]['infer_mode'] = True
+        # if op_name == 'KeepKeys':
+        #     if config['Architecture']['algorithm'] == "SRN":
+        #         op[op_name]['keep_keys'] = [
+        #             'image', 'encoder_word_pos', 'gsrm_word_pos',
+        #             'gsrm_slf_attn_bias1', 'gsrm_slf_attn_bias2'
+        #         ]
+        #     else:
+        #         op[op_name]['keep_keys'] = ['image']
         transforms.append(op)
     global_config['infer_mode'] = True
     ops = create_operators(transforms, global_config)
