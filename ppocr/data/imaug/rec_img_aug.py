@@ -129,14 +129,19 @@ class HeightCrop(object):
         return data
 
 
-class GaussBlur(object):
-    def __init__(self, aug_prob=0.4,
-                 size_thres=(10, 10),
-                 kernel_size=(5, 5),
-                 **kwargs):
+class GaussBlur:
+    def __init__(
+        self,
+        aug_prob=0.4,
+        size_thres=(10, 10),
+        kernel_size=(5, 5),
+        **kwargs,
+    ):
+        if not isinstance(kernel_size):
+            raise TypeError('"kernel_size" must be tuple!')
         self.aug_prob = aug_prob
         self.size_thres = size_thres
-        self.kernel_size = tuple(kernel_size)
+        self.kernel_size = kernel_size
 
     def __call__(self, data):
         img = data['image']

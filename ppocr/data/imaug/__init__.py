@@ -22,7 +22,17 @@ from .make_border_map import MakeBorderMap
 from .make_shrink_map import MakeShrinkMap
 from .random_crop_data import EastRandomCropData, PSERandomCrop
 
-from .rec_general import Albu, Imau
+from .rec_general import (
+    Albu,
+    Imau,
+    HeightRatioCrop,
+    Resize,
+    ToFloat,
+    Normalize,
+    Pad,
+    PatchPad,
+    Transpose,
+)
 from .rec_img_aug import (
     RecAug,
     RecResizeImg,
