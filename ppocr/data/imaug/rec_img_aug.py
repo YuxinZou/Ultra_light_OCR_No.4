@@ -72,12 +72,17 @@ class Tia(object):
                  stretch=True,
                  perspective=True,
                  size_thres=(20, 20),
+                 segment=(3, 6),
                  **kwargs):
         self.aug_prob = aug_prob
         self.distort = distort
         self.stretch = stretch
         self.perspective = perspective
         self.h_thres, self.w_thres = size_thres
+        if isinstance(segment, int):
+            self.segment = (segment, segment)
+        else:
+            self.segment = segment
 
     def __call__(self, data):
         img = data['image']
@@ -88,7 +93,8 @@ class Tia(object):
                     img_height >= self.h_thres and
                     img_width >= self.w_thres
             ):
-                img = tia_distort(img, random.randint(3, 6))
+                segment = random.randint(self.segment[0], self.segment[1])
+                img = tia_distort(img, segment)
 
         if self.stretch:
             if (
@@ -96,7 +102,8 @@ class Tia(object):
                     img_height >= self.h_thres and
                     img_width >= self.w_thres
             ):
-                img = tia_stretch(img, random.randint(3, 6))
+                segment = random.randint(self.segment[0], self.segment[1])
+                img = tia_stretch(img, segment)
 
         if self.perspective:
             if random.random() <= self.aug_prob:
