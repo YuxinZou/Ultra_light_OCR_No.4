@@ -3,7 +3,7 @@ Global:
   epoch_num: 1500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans
+  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans_shrink_rotate
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 10000]
@@ -20,7 +20,7 @@ Global:
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans.txt
+  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans_shrink_rotate.txt
 
 Optimizer:
   name: Adam
@@ -74,14 +74,14 @@ Train:
       - DecodeImage: # load image
           img_mode: BGR
           channel_first: False
-      - HeightRatioCrop:
-          aug_prob: 0.5
-          crop_ratio: !!python/tuple [0, 0.05]
-      - Resize:
-          img_scale:
-            - !!python/tuple [480, 48]  # (w, h) order
-          ensures: max_width
-          record_target_scale: True
+      - Albu:
+          transforms:
+            - typename: ColorJitter
+              brightness: 0.2
+              contrast: 0.2
+              saturation: 0.2
+              hue: 0.2
+              p: 0.5
       - Imau:
           transforms:
             - typename: Sometimes
@@ -95,11 +95,35 @@ Train:
                   cval: !!python/tuple [0, 255]
                   fill_per_channel: True
       - Tia:
-          aug_prob: 0.4
+          aug_prob: 0.5
           distort: True
           stretch: True
           perspective: True
           size_thres: [20, 20]
+          segment: [3, 6]
+      - RandomPadding:
+          aug_prob: 0.5
+          size_thres: !!python/tuple [10, 10]
+          max_ratio: !!python/tuple [0.05, 0.05, 0.05, 0.05]
+          padding_mode: constant
+          pad_val: !!python/tuple [127.5, 127.5, 127.5]
+      - Imau:
+          transforms:
+            - typename: Sometimes
+              p: 0.5
+              then_list:
+                - typename: Rotate
+                  rotate: !!python/tuple [-5, 5]
+                  cval: [127.5, 127.5, 127.5]
+                  fit_output: false
+      - HeightRatioCrop:
+          aug_prob: 0.5
+          crop_ratio: !!python/tuple [0, 0.05]
+      - Resize:
+          img_scale:
+            - !!python/tuple [480, 48]  # (w, h) order
+          ensures: max_width
+          record_target_scale: True
       - Imau:
           transforms:
             - typename: Sometimes
@@ -107,7 +131,7 @@ Train:
               then_list:
                 - typename: AdditiveGaussianNoise
                   loc: 0
-                  scale: !!python/tuple [0, 10]
+                  scale: !!python/tuple [0, 15]
                   per_channel: True
       - Imau:
           transforms:
@@ -115,24 +139,12 @@ Train:
               p: 0.5
               then_list:
                 - typename: MotionBlur
-                  k: !!python/tuple [3, 7]
+                  k: !!python/tuple [3, 9]
                   angle: !!python/tuple [0, 360]
                   direction: !!python/tuple [-1.0, 1.0]
                   order: 1
-      - Albu:
-          transforms:
-            - typename: ColorJitter
-              brightness: 0.2
-              contrast: 0.2
-              saturation: 0.2
-              hue: 0.2
-              p: 0.5
-      # - ShiftJitter:
-      #     aug_prob: 1.0
-      #     size_thres: [10, 10]
-      #     shift_control: 0.01
       - PixelReverse:
-          aug_prob: 0.4
+          aug_prob: 0.5
       - CTCLabelEncode: # Class handling label
       - ToFloat:
           key: ['image']

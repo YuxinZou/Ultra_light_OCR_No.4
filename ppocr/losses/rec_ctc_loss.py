@@ -34,3 +34,23 @@ class CTCLoss(nn.Layer):
         loss = self.loss_func(predicts, labels, preds_lengths, label_lengths)
         loss = loss.mean()  # sum
         return {'loss': loss}
+
+
+class FocalCTCLoss(nn.Layer):
+    def __init__(self, alpha=0.5, gamma=2.0, **kwargs):
+        super(FocalCTCLoss, self).__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.loss_func = nn.CTCLoss(blank=0, reduction='none')
+
+    def __call__(self, predicts, batch):
+        predicts = predicts.transpose((1, 0, 2))
+        N, B, _ = predicts.shape
+        preds_lengths = paddle.to_tensor([N] * B, dtype='int64')
+        labels = batch[1].astype("int32")
+        label_lengths = batch[2].astype('int64')
+        loss = self.loss_func(predicts, labels, preds_lengths, label_lengths)
+        p = paddle.exp(-loss)
+        focal_ctc_loss = self.alpha * paddle.pow((1 - p), self.gamma) * loss
+        focal_ctc_loss = focal_ctc_loss.mean()  # sum
+        return {'loss': focal_ctc_loss}

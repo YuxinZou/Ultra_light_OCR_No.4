@@ -3,7 +3,7 @@ Global:
   epoch_num: 1500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans
+  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans_lr0002
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 10000]
@@ -20,7 +20,7 @@ Global:
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans.txt
+  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans_lr0002.txt
 
 Optimizer:
   name: Adam
@@ -28,7 +28,7 @@ Optimizer:
   beta2: 0.999
   lr:
     name: CyclicalCosine
-    learning_rate: 0.001
+    learning_rate: 0.002
     cycle: 50
   regularizer:
     name: 'L2'

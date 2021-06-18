@@ -22,7 +22,7 @@ def build_loss(config):
     from .det_sast_loss import SASTLoss
 
     # rec loss
-    from .rec_ctc_loss import CTCLoss
+    from .rec_ctc_loss import CTCLoss, FocalCTCLoss
     from .rec_att_loss import AttentionLoss
     from .rec_srn_loss import SRNLoss
 
@@ -32,7 +32,7 @@ def build_loss(config):
     # e2e loss
     from .e2e_pg_loss import PGLoss
     support_dict = [
-        'DBLoss', 'EASTLoss', 'SASTLoss', 'CTCLoss', 'ClsLoss', 'AttentionLoss',
+        'DBLoss', 'EASTLoss', 'SASTLoss', 'CTCLoss', 'FocalCTCLoss', 'ClsLoss', 'AttentionLoss',
         'SRNLoss', 'PGLoss']
 
     config = copy.deepcopy(config)
