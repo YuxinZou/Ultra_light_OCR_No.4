@@ -80,7 +80,12 @@ class SimpleDataSet(Dataset):
             file_name = substr[0]
             label = substr[1]
             img_path = os.path.join(self.data_dir, file_name)
-            data = {'img_path': img_path, 'label': label}
+            data = dict(
+                img_path=img_path,
+                label=label,
+                mode=self.mode,
+                epoch=self.seed,
+            )
             if not os.path.exists(img_path):
                 raise Exception("{} does not exist!".format(img_path))
             with open(data['img_path'], 'rb') as f:

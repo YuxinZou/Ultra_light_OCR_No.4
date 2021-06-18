@@ -200,6 +200,10 @@ class Resize:
             phase, "ratio" during test phase.
             NOTE that with "max_width" mode, images may NOT be resized w.r.t.
             image aspect ratio if it's too long.
+        ms_start_epoch (bool): if True, will save "target_epoch" value to
+            `data`, for Pad transform.
+        ms_start_epoch (int): only do multi-scale after specified epoch num,
+            otherwise use the first `img_scale`
     """
     valid_mode = ('ratio', 'max_width')
 
@@ -208,6 +212,7 @@ class Resize:
         img_scale: Union[Tuple[int], List[Tuple[int]]],
         ensures: str,
         record_target_scale: bool = True,
+        ms_start_epoch: int = 0,
         **kwargs,
     ) -> None:
         if isinstance(img_scale, tuple):
@@ -218,13 +223,20 @@ class Resize:
 
         self.img_scale = img_scale
         self.ensures = ensures
+        self.ms_start_epoch = ms_start_epoch
         self.record_target_scale = record_target_scale
 
-    def select_scale(self):
-        return random.choice(self.img_scale)
+    def select_scale(self, epoch: int, mode: str = 'train') -> Tuple[int]:
+        if mode == 'train' and epoch > self.ms_start_epoch:
+            return self.img_scale[epoch % len(self.img_scale)]
+        else:
+            if mode != 'train':
+                assert len(self.img_scale) == 1, \
+                    '`img_scale` must be 1 during eval/test'
+            return self.img_scale[0]
 
     def __call__(self, data: Dict) -> Dict:
-        scale = self.select_scale()
+        scale = self.select_scale(epoch=data['epoch'], mode=data['mode'])
         if self.ensures == 'max_width':
             img = resize_keep_max_width(data['image'], scale)
         else:

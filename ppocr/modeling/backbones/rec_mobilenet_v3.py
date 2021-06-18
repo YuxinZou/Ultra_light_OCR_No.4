@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from paddle import nn
+from paddle.nn import functional as F
 
 from ppocr.modeling.backbones.det_mobilenet_v3 import (
     ResidualUnit,
@@ -32,6 +33,7 @@ class MobileNetV3(nn.Layer):
         large_stride=None,
         small_stride=None,
         last_pool=None,
+        ms_pool_type=None,
         **kwargs,
     ):
         super(MobileNetV3, self).__init__()
@@ -138,15 +140,28 @@ class MobileNetV3(nn.Layer):
             name='conv_last',
         )
 
-        if last_pool is None:
-            self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+        self.multi_scale = bool(ms_pool_type)
+        if self.multi_scale:
+            if ms_pool_type == 'max':
+                self.pool = F.adaptive_max_pool2d
+            elif ms_pool_type == 'mean':
+                self.pool = F.adaptive_avg_pool2d
         else:
-            self.pool = nn.MaxPool2D(**last_pool)
+            if last_pool is None:
+                self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
+            else:
+                self.pool = nn.MaxPool2D(**last_pool)
+
         self.out_channels = make_divisible(scale * cls_ch_squeeze)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.blocks(x)
         x = self.conv2(x)
-        x = self.pool(x)
+        if self.multi_scale:
+            h, w = x.shape[-2:]
+            assert w % h == 0, f'w: {w} can\'t be devided by h: {h}'
+            x = self.pool(x, output_size=(1, w//h))
+        else:
+            x = self.pool(x)
         return x
