@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import os
 import sys
+import random
 
 __dir__ = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(__dir__)
@@ -25,9 +26,12 @@ sys.path.append(os.path.abspath(os.path.join(__dir__, '..')))
 
 import yaml
 import paddle
+import numpy as np
 import paddle.distributed as dist
 
+random.seed(2)
 paddle.seed(2)
+np.random.seed(2)
 
 from ppocr.data import build_dataloader
 from ppocr.modeling.architectures import build_model

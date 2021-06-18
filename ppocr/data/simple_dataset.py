@@ -43,6 +43,7 @@ class SimpleDataSet(Dataset):
         self.do_shuffle = loader_config['shuffle']
 
         self.seed = seed
+        np.random.seed(seed)
         logger.info("Initialize indexs of datasets:%s" % label_file_list)
         self.data_lines = self.get_image_info_list(label_file_list, ratio_list)
         self.data_idx_order_list = list(range(len(self.data_lines)))
