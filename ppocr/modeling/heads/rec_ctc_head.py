@@ -35,7 +35,7 @@ def get_para_bias_attr(l2_decay, k, name):
 
 
 class CTCHead(nn.Layer):
-    def __init__(self, in_channels, out_channels, fc_decay=0.0004, **kwargs):
+    def __init__(self, in_channels, out_channels, fc_decay=0.0004, dropout=None, **kwargs):
         super(CTCHead, self).__init__()
         weight_attr, bias_attr = get_para_bias_attr(
             l2_decay=fc_decay, k=in_channels, name='ctc_fc')
@@ -46,8 +46,14 @@ class CTCHead(nn.Layer):
             bias_attr=bias_attr,
             name='ctc_fc')
         self.out_channels = out_channels
+        if dropout is not None:
+            self.dropout = nn.Dropout(**dropout)
+        else:
+            self.dropout = None
 
     def forward(self, x, labels=None):
+        if self.dropout is not None:
+            x = self.dropout(x)
         predicts = self.fc(x)
         if not self.training:
             predicts = F.softmax(predicts, axis=2)
