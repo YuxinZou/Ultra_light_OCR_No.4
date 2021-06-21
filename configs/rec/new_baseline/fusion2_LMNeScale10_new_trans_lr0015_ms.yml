@@ -72,7 +72,7 @@ Train:
           img_mode: BGR
           channel_first: False
       - HeightRatioCrop:
-          aug_prob: 1.0
+          aug_prob: 0.5
           crop_ratio: !!python/tuple [0, 0.05]
       - Resize:
           img_scale:
