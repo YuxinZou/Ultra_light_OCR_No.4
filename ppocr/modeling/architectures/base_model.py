@@ -68,10 +68,13 @@ class BaseModel(nn.Layer):
         config["Head"]['in_channels'] = in_channels
         self.head = build_head(config["Head"])
 
-    def forward(self, x, data=None):
+    def forward(self, x, data=None, epoch=None, epoch_num=None):
         if self.use_transform:
             x = self.transform(x)
-        x = self.backbone(x)
+        if epoch is None:
+            x = self.backbone(x)
+        else:
+            x = self.backbone(x, epoch=epoch, epoch_num=epoch_num)
         if self.use_neck:
             x = self.neck(x)
         if data is None:
