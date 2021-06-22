@@ -3,11 +3,11 @@ Global:
   epoch_num: 1500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans_ms
+  save_model_dir: ./checkpoint/fusion2_LMNeScale10_new_trans_dp
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 10000]
-  eval_epoch_step: 1
+  eval_epoch_step: 100
   cal_metric_during_train: True
   pretrained_model:
   checkpoints: 
@@ -20,7 +20,7 @@ Global:
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans_ms.txt
+  save_res_path: ./output/rec/fusion2_LMNeScale10_new_trans_dp.txt
 
 Optimizer:
   name: Adam
@@ -43,7 +43,10 @@ Architecture:
     scale: 1.0
     model_name: large
     small_stride: [1, 2, 2, 2]
-    ms_pool_type: max
+    dropout_cfg:
+      start_epoch: 200
+      final_p: 0.1
+      start_block_idx: 12  # 12 for large:C5
   Neck:
     name: SequenceEncoder
     encoder_type: rnn
@@ -65,20 +68,18 @@ Metric:
 Train:
   dataset:
     name: SimpleDataSet
-    data_dir: ./data/trainval/TrainImages/
-    label_file_list: ["./data/trainval/train.txt"]
+    data_dir: ./data/media/trainval/TrainImages/
+    label_file_list: ["./data/media/trainval/mini.txt"]
     transforms:
       - DecodeImage: # load image
           img_mode: BGR
           channel_first: False
       - HeightRatioCrop:
-          aug_prob: 0.5
+          aug_prob: 1.0
           crop_ratio: !!python/tuple [0, 0.05]
       - Resize:
           img_scale:
             - !!python/tuple [480, 48]  # (w, h) order
-            - !!python/tuple [320, 32]  # (w, h) order
-            - !!python/tuple [640, 64]  # (w, h) order
           ensures: max_width
           record_target_scale: True
       - Imau:
@@ -147,15 +148,15 @@ Train:
           keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
   loader:
     shuffle: True
-    batch_size_per_card: 32
+    batch_size_per_card: 8
     drop_last: True
     num_workers: 8
 
 Eval:
   dataset:
     name: SimpleDataSet
-    data_dir: ./data/trainval/TrainImages/
-    label_file_list: ["./data/trainval/val.txt"]
+    data_dir: ./data/media/trainval/TrainImages/
+    label_file_list: ["./data/media/trainval/val.txt"]
     transforms:
       - DecodeImage: # load image
           img_mode: BGR
