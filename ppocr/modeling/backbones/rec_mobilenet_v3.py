@@ -34,6 +34,7 @@ class MobileNetV3(nn.Layer):
         small_stride=None,
         last_pool=None,
         ms_pool_type=None,
+        dropout_cfg=None,
         **kwargs,
     ):
         super(MobileNetV3, self).__init__()
@@ -91,10 +92,10 @@ class MobileNetV3(nn.Layer):
             raise NotImplementedError("mode[" + model_name +
                                       "_model] is not implemented!")
 
-        supported_scale = [0.35, 0.5, 0.75, 1.0, 1.25]
-        assert scale in supported_scale, (
-            f'supported scales are {supported_scale} '
-            f'but input scale is {scale}')
+        # supported_scale = [0.35, 0.5, 0.75, 1.0, 1.25]
+        # assert scale in supported_scale, (
+        #     f'supported scales are {supported_scale} '
+        #     f'but input scale is {scale}')
 
         inplanes = 16
         # conv1
@@ -154,9 +155,23 @@ class MobileNetV3(nn.Layer):
 
         self.out_channels = make_divisible(scale * cls_ch_squeeze)
 
-    def forward(self, x):
+        if dropout_cfg is None:
+            dropout_cfg = dict()
+        self.dp_start_epoch = dropout_cfg.get('start_epoch')
+        self.dp_final_p = dropout_cfg.get('final_p')
+        self.dp_start_block_idx = dropout_cfg.get('start_block_idx')
+
+    def forward(self, x, epoch=None, epoch_num=None):
         x = self.conv1(x)
-        x = self.blocks(x)
+        if not self.training or epoch is None or epoch < self.dp_start_epoch:
+            x = self.blocks(x)
+        else:
+            for i, block in enumerate(self.blocks):
+                x = block(x)
+                if i >= self.dp_start_block_idx:
+                    progress = (epoch - self.dp_start_epoch) / \
+                        (epoch_num - self.dp_start_epoch)
+                    x = F.dropout2d(x, p=progress*self.dp_final_p)
         x = self.conv2(x)
         if self.multi_scale:
             h, w = x.shape[-2:]

@@ -278,7 +278,7 @@ def train(
                 preds = model(images, others)
                 model_average = True
             else:
-                preds = model(images)
+                preds = model(images, epoch=epoch, epoch_num=epoch_num)
             loss = loss_class(preds, batch)
             avg_loss = loss['loss']
             avg_loss.backward()
