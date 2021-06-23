@@ -44,6 +44,7 @@ Architecture:
     model_name: large
     small_stride: [1, 2, 2, 2]
     use_fpn: True
+    fpn_out_channel: 960
     last_pool:
       kernel_size: 3
       stride: 3

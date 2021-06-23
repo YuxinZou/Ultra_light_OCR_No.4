@@ -45,6 +45,7 @@ class MobileNetV3M(nn.Layer):
         force_se=False,
         act_residual=False,
         use_fpn=False,
+        fpn_out_channel=960,
         **kwargs,
     ):
         super(MobileNetV3M, self).__init__()
@@ -90,7 +91,7 @@ class MobileNetV3M(nn.Layer):
                 c4_chn = make_divisible(cfg[11][2]*scale)
                 c5_chn = make_divisible(cfg[14][2]*scale)
                 self.fpn_chns = (c3_chn, c4_chn, c5_chn)
-                self.fpn_mid_chn = make_divisible(cfg[14][2]*2*scale)
+                self.fpn_mid_chn = make_divisible(fpn_out_channel*scale)
             else:
                 self.use_fpn = False
 
