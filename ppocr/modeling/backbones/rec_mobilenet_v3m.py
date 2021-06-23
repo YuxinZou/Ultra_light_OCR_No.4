@@ -44,6 +44,7 @@ class MobileNetV3M(nn.Layer):
         force_shortcut=False,
         force_se=False,
         act_residual=False,
+        use_fpn=False,
         **kwargs,
     ):
         super(MobileNetV3M, self).__init__()
@@ -81,6 +82,18 @@ class MobileNetV3M(nn.Layer):
                 [5, 960, 160, True, 'hardswish', 1],
             ]
             cls_ch_squeeze = 960
+
+            # for FPN
+            if use_fpn:
+                self.use_fpn = True
+                c3_chn = make_divisible(cfg[2][2]*scale)
+                c4_chn = make_divisible(cfg[11][2]*scale)
+                c5_chn = make_divisible(cfg[14][2]*scale)
+                self.fpn_chns = (c3_chn, c4_chn, c5_chn)
+                self.fpn_mid_chn = make_divisible(cfg[14][2]*2*scale)
+            else:
+                self.use_fpn = False
+
         elif model_name == "small":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
@@ -140,8 +153,11 @@ class MobileNetV3M(nn.Layer):
             i += 1
         self.blocks = nn.Sequential(*block_list)
 
+        if self.use_fpn:
+            self.fpn = FPNUnit(self.fpn_chns, self.fpn_mid_chn)
+
         self.conv2 = ConvBNLayer(
-            in_channels=inplanes,
+            in_channels=inplanes if not self.use_fpn else self.fpn_mid_chn,
             out_channels=make_divisible(scale * cls_ch_squeeze),
             kernel_size=1,
             stride=1,
@@ -168,20 +184,41 @@ class MobileNetV3M(nn.Layer):
         if dropout_cfg is None:
             dropout_cfg = dict()
         self.dp_start_epoch = dropout_cfg.get('start_epoch')
+        self.dp_curr_finish_epoch = dropout_cfg.get('curr_finish_epoch')
         self.dp_final_p = dropout_cfg.get('final_p')
         self.dp_start_block_idx = dropout_cfg.get('start_block_idx')
 
     def forward(self, x, epoch=None, epoch_num=None):
+        def get_progress():
+            start = self.dp_start_epoch
+            if self.dp_curr_finish_epoch is not None:
+                finish = self.dp_curr_finish_epoch
+                position = min(epoch, finish)
+            else:
+                finish = epoch_num
+                position = epoch
+            return (position - start) / (finish - start)
+
         x = self.conv1(x)
+        if self.use_fpn:
+            fpn_inputs = []
         if not self.training or epoch is None or epoch < self.dp_start_epoch:
-            x = self.blocks(x)
+            for i, block in enumerate(self.blocks):
+                x = block(x)
+                if self.use_fpn and i in [2, 11, 14]:
+                    fpn_inputs.append(x)
         else:
             for i, block in enumerate(self.blocks):
                 x = block(x)
                 if i >= self.dp_start_block_idx:
-                    progress = (epoch - self.dp_start_epoch) / \
-                        (epoch_num - self.dp_start_epoch)
+                    if self.dp_curr_finish_epoch:
+                        epoch_num = self.dp_curr_finish_epoch
+                    progress = get_progress()
                     x = F.dropout2d(x, p=progress*self.dp_final_p)
+                if self.use_fpn and i in [2, 11, 14]:
+                    fpn_inputs.append(x)
+        if self.use_fpn:
+            x = self.fpn(fpn_inputs)
         x = self.conv2(x)
         if self.multi_scale:
             h, w = x.shape[-2:]
@@ -412,3 +449,104 @@ class ConvBNLayer(nn.Layer):
             x = self.act(x)
 
         return x
+
+
+class FPNUnit(nn.Layer):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        use_se=True,
+        se_act='default',
+        name='fpn',
+    ):
+        super(FPNUnit, self).__init__()
+
+        self.if_se = use_se
+
+        self.c3_lat = nn.Conv2D(
+            in_channels=in_channels[0],
+            out_channels=in_channels[0],
+            groups=in_channels[0],
+            kernel_size=(4, 1),
+            stride=(4, 1),
+            weight_attr=ParamAttr(
+                name=name + "_c3_down_weight",
+                initializer=nn.initializer.Constant(0.25),
+            ),
+            bias_attr=ParamAttr(
+                name=name + "_c3_down_bias",
+                initializer=nn.initializer.Constant(0),
+            ),
+        )
+        self.c4_lat = nn.Conv2D(
+            in_channels=in_channels[1],
+            out_channels=in_channels[1],
+            groups=in_channels[1],
+            kernel_size=(2, 1),
+            stride=(2, 1),
+            weight_attr=ParamAttr(
+                name=name + "_c4_down_weight",
+                initializer=nn.initializer.Constant(0.5),
+            ),
+            bias_attr=ParamAttr(
+                name=name + "_c4_down_bias",
+                initializer=nn.initializer.Constant(0),
+            ),
+        )
+
+        self.expand_conv = nn.Conv2D(
+            in_channels=sum(in_channels),
+            out_channels=out_channels,
+            kernel_size=1,
+            stride=1,
+            weight_attr=ParamAttr(name=name + '_expand_weights'),
+            bias_attr=ParamAttr(name=name + '_expand_bias'),
+        )
+        self.bottleneck_conv = ConvBNLayer(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            groups=out_channels,
+            if_act=False,
+            name=name + "_depthwise",
+        )
+        if self.if_se:
+            self.mid_se = SEModule(
+                out_channels,
+                name=name + "_se",
+                act=se_act,
+            )
+
+    def forward(self, inputs):
+        c3, c4, c5 = inputs
+        c3 = self.c3_lat(c3)
+        c4 = self.c4_lat(c4)
+        x = paddle.concat([c3, c4, c5], axis=1)
+        x = self.expand_conv(x)
+        x = self.bottleneck_conv(x)
+        if self.if_se:
+            x = self.mid_se(x)
+
+        return x
+
+
+if __name__ == '__main__':
+    model = MobileNetV3M(
+        model_name='large',
+        scale=1.0,
+        dropout_cfg=dict(
+            start_epoch=200,
+            final_p=0.1,
+            start_block_idx=12,
+            curr_finish_epoch=300,
+        ),
+        use_fpn=True,
+    )
+    import pdb
+    aa = paddle.randn((1, 3, 32, 320))
+    print(model(aa).shape)
+    pdb.set_trace()

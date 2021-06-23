@@ -72,6 +72,7 @@ class MobileNetV3(nn.Layer):
                 [5, 960, 160, True, 'hardswish', 1],
             ]
             cls_ch_squeeze = 960
+
         elif model_name == "small":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
@@ -158,10 +159,21 @@ class MobileNetV3(nn.Layer):
         if dropout_cfg is None:
             dropout_cfg = dict()
         self.dp_start_epoch = dropout_cfg.get('start_epoch')
+        self.dp_curr_finish_epoch = dropout_cfg.get('curr_finish_epoch')
         self.dp_final_p = dropout_cfg.get('final_p')
         self.dp_start_block_idx = dropout_cfg.get('start_block_idx')
 
     def forward(self, x, epoch=None, epoch_num=None):
+        def get_progress():
+            start = self.dp_start_epoch
+            if self.dp_curr_finish_epoch is not None:
+                finish = self.dp_curr_finish_epoch
+                position = min(epoch, finish)
+            else:
+                finish = epoch_num
+                position = epoch
+            return (position - start) / (finish - start)
+
         x = self.conv1(x)
         if not self.training or epoch is None or epoch < self.dp_start_epoch:
             x = self.blocks(x)
@@ -169,8 +181,9 @@ class MobileNetV3(nn.Layer):
             for i, block in enumerate(self.blocks):
                 x = block(x)
                 if i >= self.dp_start_block_idx:
-                    progress = (epoch - self.dp_start_epoch) / \
-                        (epoch_num - self.dp_start_epoch)
+                    if self.dp_curr_finish_epoch:
+                        epoch_num = self.dp_curr_finish_epoch
+                    progress = get_progress()
                     x = F.dropout2d(x, p=progress*self.dp_final_p)
         x = self.conv2(x)
         if self.multi_scale:
