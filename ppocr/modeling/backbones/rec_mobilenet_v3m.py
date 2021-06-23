@@ -31,28 +31,33 @@ def make_divisible(v, divisor=8, min_value=None):
 
 class MobileNetV3M(nn.Layer):
     def __init__(
-        self,
-        in_channels=3,
-        model_name='small',
-        scale=0.5,
-        large_stride=None,
-        small_stride=None,
-        last_pool=None,
-        ms_pool_type=None,
-        dropout_cfg=None,
-        overwrite_act=None,
-        force_shortcut=False,
-        force_se=False,
-        act_residual=False,
-        use_fpn=False,
-        fpn_out_channel=960,
-        **kwargs,
+            self,
+            in_channels=3,
+            model_name='small',
+            scale=0.5,
+            large_stride=None,
+            small_stride=None,
+            last_pool=None,
+            ms_pool_type=None,
+            dropout_cfg=None,
+            overwrite_act=None,
+            force_shortcut=False,
+            force_se=False,
+            act_residual=False,
+            use_fpn=False,
+            fpn_out_channel=960,
+            **kwargs,
     ):
         super(MobileNetV3M, self).__init__()
+        # if small_stride is None:
+        #     small_stride = [2, 2, 2, 2]
+        # if large_stride is None:
+        #     large_stride = [1, 2, 2, 2]
+
         if small_stride is None:
-            small_stride = [2, 2, 2, 2]
+            small_stride = [[2, 1], [2, 1], [2, 1], [2, 1]]
         if large_stride is None:
-            large_stride = [1, 2, 2, 2]
+            large_stride = [[1, 1], [2, 1], [2, 1], [2, 1]]
 
         assert isinstance(large_stride, list), \
             f"large_stride type must be list but got {type(large_stride)}"
@@ -66,10 +71,10 @@ class MobileNetV3M(nn.Layer):
         if model_name == "large":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
-                [3, 16, 16, False, 'relu', large_stride[0]],
-                [3, 64, 24, False, 'relu', (large_stride[1], 1)],
+                [3, 16, 16, False, 'relu', tuple(large_stride[0])],
+                [3, 64, 24, False, 'relu', tuple(large_stride[1])],
                 [3, 72, 24, False, 'relu', 1],
-                [5, 72, 40, True, 'relu', (large_stride[2], 1)],
+                [5, 72, 40, True, 'relu', tuple(large_stride[2])],
                 [5, 120, 40, True, 'relu', 1],
                 [5, 120, 40, True, 'relu', 1],
                 [3, 240, 80, False, 'hardswish', 1],
@@ -78,7 +83,7 @@ class MobileNetV3M(nn.Layer):
                 [3, 184, 80, False, 'hardswish', 1],
                 [3, 480, 112, True, 'hardswish', 1],
                 [3, 672, 112, True, 'hardswish', 1],
-                [5, 672, 160, True, 'hardswish', (large_stride[3], 1)],
+                [5, 672, 160, True, 'hardswish', tuple(large_stride[3])],
                 [5, 960, 160, True, 'hardswish', 1],
                 [5, 960, 160, True, 'hardswish', 1],
             ]
@@ -87,26 +92,26 @@ class MobileNetV3M(nn.Layer):
             # for FPN
             if use_fpn:
                 self.use_fpn = True
-                c3_chn = make_divisible(cfg[2][2]*scale)
-                c4_chn = make_divisible(cfg[11][2]*scale)
-                c5_chn = make_divisible(cfg[14][2]*scale)
+                c3_chn = make_divisible(cfg[2][2] * scale)
+                c4_chn = make_divisible(cfg[11][2] * scale)
+                c5_chn = make_divisible(cfg[14][2] * scale)
                 self.fpn_chns = (c3_chn, c4_chn, c5_chn)
-                self.fpn_mid_chn = make_divisible(fpn_out_channel*scale)
+                self.fpn_mid_chn = make_divisible(fpn_out_channel * scale)
             else:
                 self.use_fpn = False
 
         elif model_name == "small":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
-                [3, 16, 16, True, 'relu', (small_stride[0], 1)],
-                [3, 72, 24, False, 'relu', (small_stride[1], 1)],
+                [3, 16, 16, True, 'relu', tuple(small_stride[0])],
+                [3, 72, 24, False, 'relu', tuple(small_stride[1])],
                 [3, 88, 24, False, 'relu', 1],
-                [5, 96, 40, True, 'hardswish', (small_stride[2], 1)],
+                [5, 96, 40, True, 'hardswish', tuple(small_stride[2])],
                 [5, 240, 40, True, 'hardswish', 1],
                 [5, 240, 40, True, 'hardswish', 1],
                 [5, 120, 48, True, 'hardswish', 1],
                 [5, 144, 48, True, 'hardswish', 1],
-                [5, 288, 96, True, 'hardswish', (small_stride[3], 1)],
+                [5, 288, 96, True, 'hardswish', tuple(small_stride[3])],
                 [5, 576, 96, True, 'hardswish', 1],
                 [5, 576, 96, True, 'hardswish', 1],
             ]
@@ -215,7 +220,7 @@ class MobileNetV3M(nn.Layer):
                     if self.dp_curr_finish_epoch:
                         epoch_num = self.dp_curr_finish_epoch
                     progress = get_progress()
-                    x = F.dropout2d(x, p=progress*self.dp_final_p)
+                    x = F.dropout2d(x, p=progress * self.dp_final_p)
                 if self.use_fpn and i in [2, 11, 14]:
                     fpn_inputs.append(x)
         if self.use_fpn:
@@ -224,7 +229,7 @@ class MobileNetV3M(nn.Layer):
         if self.multi_scale:
             h, w = x.shape[-2:]
             assert w % h == 0, f'w: {w} can\'t be devided by h: {h}'
-            x = self.pool(x, output_size=(1, w//h))
+            x = self.pool(x, output_size=(1, w // h))
         else:
             x = self.pool(x)
         return x
@@ -232,18 +237,18 @@ class MobileNetV3M(nn.Layer):
 
 class ResidualUnit(nn.Layer):
     def __init__(
-        self,
-        in_channels,
-        mid_channels,
-        out_channels,
-        kernel_size,
-        stride,
-        use_se,
-        act=None,
-        force_shortcut=False,
-        act_last=False,
-        se_act='default',
-        name='',
+            self,
+            in_channels,
+            mid_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            use_se,
+            act=None,
+            force_shortcut=False,
+            act_last=False,
+            se_act='default',
+            name='',
     ):
         super(ResidualUnit, self).__init__()
 
@@ -253,8 +258,8 @@ class ResidualUnit(nn.Layer):
             self.if_shortcut = True
             short_list = []
             if (
-                (isinstance(stride, tuple) and max(stride) > 1) or
-                (not isinstance(stride, tuple) and stride > 1)
+                    (isinstance(stride, tuple) and max(stride) > 1) or
+                    (not isinstance(stride, tuple) and stride > 1)
             ):
                 short_list.append(nn.AvgPool2D(
                     kernel_size=stride,
@@ -345,11 +350,11 @@ class ResidualUnit(nn.Layer):
 
 class SEModule(nn.Layer):
     def __init__(
-        self,
-        in_channels,
-        reduction=4,
-        name="",
-        act='default',
+            self,
+            in_channels,
+            reduction=4,
+            name="",
+            act='default',
     ):
         super(SEModule, self).__init__()
         self.act = act
@@ -398,15 +403,15 @@ class SEModule(nn.Layer):
 
 class ConvBNLayer(nn.Layer):
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size,
-        stride,
-        groups=1,
-        if_act=True,
-        act=None,
-        name=None,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size,
+            stride,
+            groups=1,
+            if_act=True,
+            act=None,
+            name=None,
     ):
         super(ConvBNLayer, self).__init__()
         self.if_act = if_act
@@ -454,14 +459,14 @@ class ConvBNLayer(nn.Layer):
 
 class FPNUnit(nn.Layer):
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size=3,
-        stride=1,
-        use_se=True,
-        se_act='default',
-        name='fpn',
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            stride=1,
+            use_se=True,
+            se_act='default',
+            name='fpn',
     ):
         super(FPNUnit, self).__init__()
 
@@ -548,6 +553,7 @@ if __name__ == '__main__':
         use_fpn=True,
     )
     import pdb
+
     aa = paddle.randn((1, 3, 32, 320))
     print(model(aa).shape)
     pdb.set_trace()

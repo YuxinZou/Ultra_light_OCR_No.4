@@ -38,10 +38,15 @@ class MobileNetV3(nn.Layer):
         **kwargs,
     ):
         super(MobileNetV3, self).__init__()
+        # if small_stride is None:
+        #     small_stride = [2, 2, 2, 2]
+        # if large_stride is None:
+        #     large_stride = [1, 2, 2, 2]
+
         if small_stride is None:
-            small_stride = [2, 2, 2, 2]
+            small_stride = [[2, 1], [2, 1], [2, 1], [2, 1]]
         if large_stride is None:
-            large_stride = [1, 2, 2, 2]
+            large_stride = [[1, 1], [2, 1], [2, 1], [2, 1]]
 
         assert isinstance(large_stride, list), \
             f"large_stride type must be list but got {type(large_stride)}"
@@ -55,10 +60,10 @@ class MobileNetV3(nn.Layer):
         if model_name == "large":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
-                [3, 16, 16, False, 'relu', large_stride[0]],
-                [3, 64, 24, False, 'relu', (large_stride[1], 1)],
+                [3, 16, 16, False, 'relu', tuple(large_stride[0])],
+                [3, 64, 24, False, 'relu', tuple(large_stride[1])],
                 [3, 72, 24, False, 'relu', 1],
-                [5, 72, 40, True, 'relu', (large_stride[2], 1)],
+                [5, 72, 40, True, 'relu', tuple(large_stride[2])],
                 [5, 120, 40, True, 'relu', 1],
                 [5, 120, 40, True, 'relu', 1],
                 [3, 240, 80, False, 'hardswish', 1],
@@ -67,7 +72,7 @@ class MobileNetV3(nn.Layer):
                 [3, 184, 80, False, 'hardswish', 1],
                 [3, 480, 112, True, 'hardswish', 1],
                 [3, 672, 112, True, 'hardswish', 1],
-                [5, 672, 160, True, 'hardswish', (large_stride[3], 1)],
+                [5, 672, 160, True, 'hardswish', tuple(large_stride[3])],
                 [5, 960, 160, True, 'hardswish', 1],
                 [5, 960, 160, True, 'hardswish', 1],
             ]
@@ -76,15 +81,15 @@ class MobileNetV3(nn.Layer):
         elif model_name == "small":
             cfg = [
                 # k, exp, c,  se,     nl,  s,
-                [3, 16, 16, True, 'relu', (small_stride[0], 1)],
-                [3, 72, 24, False, 'relu', (small_stride[1], 1)],
+                [3, 16, 16, True, 'relu', tuple(small_stride[0])],
+                [3, 72, 24, False, 'relu', tuple(small_stride[1])],
                 [3, 88, 24, False, 'relu', 1],
-                [5, 96, 40, True, 'hardswish', (small_stride[2], 1)],
+                [5, 96, 40, True, 'hardswish', tuple(small_stride[2])],
                 [5, 240, 40, True, 'hardswish', 1],
                 [5, 240, 40, True, 'hardswish', 1],
                 [5, 120, 48, True, 'hardswish', 1],
                 [5, 144, 48, True, 'hardswish', 1],
-                [5, 288, 96, True, 'hardswish', (small_stride[3], 1)],
+                [5, 288, 96, True, 'hardswish', tuple(small_stride[3])],
                 [5, 576, 96, True, 'hardswish', 1],
                 [5, 576, 96, True, 'hardswish', 1],
             ]
@@ -173,7 +178,6 @@ class MobileNetV3(nn.Layer):
                 finish = epoch_num
                 position = epoch
             return (position - start) / (finish - start)
-
         x = self.conv1(x)
         if not self.training or epoch is None or epoch < self.dp_start_epoch:
             x = self.blocks(x)
