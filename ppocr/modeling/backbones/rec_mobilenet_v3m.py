@@ -46,6 +46,7 @@ class MobileNetV3M(nn.Layer):
             act_residual=False,
             use_fpn=False,
             fpn_out_channel=960,
+            norm_type='bn',
             **kwargs,
     ):
         super(MobileNetV3M, self).__init__()
@@ -119,7 +120,7 @@ class MobileNetV3M(nn.Layer):
         else:
             raise NotImplementedError("mode[" + model_name +
                                       "_model] is not implemented!")
-
+        self.norm_type = norm_type
         # supported_scale = [0.35, 0.5, 0.75, 1.0, 1.25]
         # assert scale in supported_scale, (
         #     f'supported scales are {supported_scale} '
@@ -136,6 +137,7 @@ class MobileNetV3M(nn.Layer):
             if_act=True,
             act=overwrite_act if overwrite_act else 'hardswish',
             name='conv1',
+            norm_type=self.norm_type,
         )
         i = 0
         block_list = []
@@ -154,13 +156,14 @@ class MobileNetV3M(nn.Layer):
                     force_shortcut=force_shortcut,
                     act_last=act_residual,
                     name='conv' + str(i + 2),
+                    norm_type = self.norm_type,
                 ))
             inplanes = make_divisible(scale * c)
             i += 1
         self.blocks = nn.Sequential(*block_list)
 
         if self.use_fpn:
-            self.fpn = FPNUnit(self.fpn_chns, self.fpn_mid_chn)
+            self.fpn = FPNUnit(self.fpn_chns, self.fpn_mid_chn, norm_type=self.norm_type)
 
         self.conv2 = ConvBNLayer(
             in_channels=inplanes if not self.use_fpn else self.fpn_mid_chn,
@@ -171,6 +174,7 @@ class MobileNetV3M(nn.Layer):
             if_act=True,
             act=overwrite_act if overwrite_act else 'hardswish',
             name='conv_last',
+            norm_type=self.norm_type,
         )
 
         self.multi_scale = bool(ms_pool_type)
@@ -249,11 +253,12 @@ class ResidualUnit(nn.Layer):
             act_last=False,
             se_act='default',
             name='',
+            norm_type='bn',
     ):
         super(ResidualUnit, self).__init__()
 
         self.act_last = act_last
-
+        self.norm_type = norm_type
         if force_shortcut:
             self.if_shortcut = True
             short_list = []
@@ -275,6 +280,7 @@ class ResidualUnit(nn.Layer):
                     stride=1,
                     if_act=False,
                     name=name + '_short_conv',
+                    norm_type=self.norm_type,
                 ))
             if short_list:
                 self.short = nn.Sequential(*short_list)
@@ -293,6 +299,7 @@ class ResidualUnit(nn.Layer):
             if_act=True,
             act=act,
             name=name + "_expand",
+            norm_type=self.norm_type,
         )
         self.bottleneck_conv = ConvBNLayer(
             in_channels=mid_channels,
@@ -303,6 +310,7 @@ class ResidualUnit(nn.Layer):
             if_act=True,
             act=act,
             name=name + "_depthwise",
+            norm_type=self.norm_type,
         )
         if self.if_se:
             self.mid_se = SEModule(
@@ -318,6 +326,7 @@ class ResidualUnit(nn.Layer):
             if_act=False,
             act=None,
             name=name + "_linear",
+            norm_type=self.norm_type,
         )
 
         if act_last:
@@ -412,6 +421,7 @@ class ConvBNLayer(nn.Layer):
             if_act=True,
             act=None,
             name=None,
+            norm_type='bn',
     ):
         super(ConvBNLayer, self).__init__()
         self.if_act = if_act
@@ -426,15 +436,20 @@ class ConvBNLayer(nn.Layer):
             weight_attr=ParamAttr(name=name + '_weights'),
             bias_attr=False,
         )
-
-        self.norm = nn.BatchNorm(
-            num_channels=out_channels,
-            act=None,
-            param_attr=ParamAttr(name=name + "_bn_scale"),
-            bias_attr=ParamAttr(name=name + "_bn_offset"),
-            moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance",
-        )
+        if norm_type == 'sync_bn':
+            self.norm = nn.SyncBatchNorm(
+                num_features=out_channels,
+                weight_attr=ParamAttr(name=name + "_bn_scale"),
+                bias_attr=ParamAttr(name=name + "_bn_offset"))
+        else:
+            self.norm = nn.BatchNorm(
+                num_channels=out_channels,
+                act=None,
+                param_attr=ParamAttr(name=name + "_bn_scale"),
+                bias_attr=ParamAttr(name=name + "_bn_offset"),
+                moving_mean_name=name + "_bn_mean",
+                moving_variance_name=name + "_bn_variance",
+            )
 
         if self.if_act:
             if act == 'relu':
@@ -467,10 +482,12 @@ class FPNUnit(nn.Layer):
             use_se=True,
             se_act='default',
             name='fpn',
+            norm_type='bn',
     ):
         super(FPNUnit, self).__init__()
 
         self.if_se = use_se
+        self.norm_type = norm_type
 
         self.c3_lat = nn.Conv2D(
             in_channels=in_channels[0],
@@ -519,6 +536,7 @@ class FPNUnit(nn.Layer):
             groups=out_channels,
             if_act=False,
             name=name + "_depthwise",
+            norm_type=self.norm_type,
         )
         if self.if_se:
             self.mid_se = SEModule(

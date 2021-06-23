@@ -144,7 +144,7 @@ class GaussBlur:
         kernel_size=(5, 5),
         **kwargs,
     ):
-        if not isinstance(kernel_size):
+        if not isinstance(kernel_size, tuple):
             raise TypeError('"kernel_size" must be tuple!')
         self.aug_prob = aug_prob
         self.size_thres = size_thres
