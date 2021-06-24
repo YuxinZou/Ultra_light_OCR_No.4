@@ -3,10 +3,11 @@ Global:
   epoch_num: 500
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/nb
+  save_model_dir: ./output/rec/nb_att/
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
-  eval_batch_step: [0, 500]
+  eval_batch_step: [0, 10000]
+  eval_epoch_step: 1
   cal_metric_during_train: True
   pretrained_model:
   checkpoints:
@@ -19,7 +20,7 @@ Global:
   max_text_length: 30
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/nb.txt
+  save_res_path: ./output/rec/nb_att.txt
 
 
 Optimizer:
@@ -36,8 +37,7 @@ Optimizer:
 
 Architecture:
   model_type: rec
-  algorithm: CRNN
-  Transform:
+  algorithm: RARE
   Backbone:
     name: MobileNetV3
     scale: 0.5
@@ -47,17 +47,18 @@ Architecture:
       start_epoch: 1000
   Neck:
     name: SequenceEncoder
-    encoder_type: rnn
+    encoder_type: rnn 
     hidden_size: 48
   Head:
-    name: CTCHead
-    fc_decay: 0.00001
+    name: AttentionHead
+    hidden_size: 96
+    l2_decay: 0.00001
 
 Loss:
-  name: CTCLoss
+  name: AttentionLoss
 
 PostProcess:
-  name: CTCLabelDecode
+  name: AttnLabelDecode
 
 Metric:
   name: RecMetric
@@ -99,14 +100,14 @@ Train:
           var: 0.1
       - PixelReverse:
           aug_prob: 0.4
-      - CTCLabelEncode: # Class handling label
+      - AttnLabelEncode: # Class handling label
       - RecResizeImg:
           image_shape: [3, 32, 320]
       - KeepKeys:
           keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
   loader:
     shuffle: True
-    batch_size_per_card: 2
+    batch_size_per_card: 1
     drop_last: True
     num_workers: 0
 
@@ -119,7 +120,7 @@ Eval:
       - DecodeImage: # load image
           img_mode: BGR
           channel_first: False
-      - CTCLabelEncode: # Class handling label
+      - AttnLabelEncode: # Class handling label
       - RecResizeImg:
           image_shape: [3, 32, 320]
       - KeepKeys:
