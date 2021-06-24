@@ -28,7 +28,7 @@ Optimizer:
   beta2: 0.999
   lr:
     name: CyclicalCosine
-    learning_rate: 0.004
+    learning_rate: 0.006
     cycle: 50
   regularizer:
     name: 'L2'
@@ -148,7 +148,7 @@ Train:
           keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
   loader:
     shuffle: True
-    batch_size_per_card: 64
+    batch_size_per_card: 96
     drop_last: True
     num_workers: 8
 
@@ -181,7 +181,7 @@ Eval:
   loader:
     shuffle: False
     drop_last: False
-    batch_size_per_card: 64
+    batch_size_per_card: 96
     num_workers: 8
 
 Test:
