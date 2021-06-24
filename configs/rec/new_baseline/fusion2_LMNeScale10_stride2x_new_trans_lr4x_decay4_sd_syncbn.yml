@@ -3,7 +3,7 @@ Global:
   epoch_num: 1000
   log_smooth_window: 20
   print_batch_step: 10
-  save_model_dir: ./checkpoint/fusion2_LMNeScale10_stride2x_new_trans_lr2x_decay4_sd
+  save_model_dir: ./checkpoint/fusion2_LMNeScale10_stride2x_new_trans_lr4x_decay4_sd_syncbn
   save_epoch_step: 5
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 10000]
@@ -20,7 +20,7 @@ Global:
   max_text_length: 25
   infer_mode: False
   use_space_char: False
-  save_res_path: ./output/rec/fusion2_LMNeScale10_stride2x_new_trans_lr2x_decay4_sd.txt
+  save_res_path: ./output/rec/fusion2_LMNeScale10_stride2x_new_trans_lr4x_decay4_sd_syncbn.txt
 
 Optimizer:
   name: Adam
@@ -28,7 +28,7 @@ Optimizer:
   beta2: 0.999
   lr:
     name: CyclicalCosine
-    learning_rate: 0.002
+    learning_rate: 0.004
     cycle: 50
   regularizer:
     name: 'L2'
@@ -39,9 +39,10 @@ Architecture:
   algorithm: CRNN
   Transform:
   Backbone:
-    name: MobileNetV3
+    name: MobileNetV3M
     scale: 1.0
     model_name: large
+    norm_type: sync_bn
     large_stride: [[1,1], [2,2], [2,1], [2,1]]
     last_pool:
       kernel_size: 3
@@ -152,7 +153,7 @@ Train:
           keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
   loader:
     shuffle: True
-    batch_size_per_card: 32
+    batch_size_per_card: 64
     drop_last: True
     num_workers: 8
 
@@ -185,7 +186,7 @@ Eval:
   loader:
     shuffle: False
     drop_last: False
-    batch_size_per_card: 32
+    batch_size_per_card: 64
     num_workers: 8
 
 Test:
