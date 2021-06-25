@@ -23,6 +23,7 @@ class CyclicalCosineDecay(LRScheduler):
                  cycle=1,
                  last_epoch=-1,
                  eta_min=0.0,
+                 restart_weight=1.0,
                  verbose=False):
         """
         Cyclical cosine learning rate decay
@@ -39,11 +40,14 @@ class CyclicalCosineDecay(LRScheduler):
                                                   verbose)
         self.cycle = cycle
         self.eta_min = eta_min
+        self.restart_weight = restart_weight
 
     def get_lr(self):
         if self.last_epoch == 0:
             return self.base_lr
         reletive_epoch = self.last_epoch % self.cycle
-        lr = self.eta_min + 0.5 * (self.base_lr - self.eta_min) * \
+        current_cycle_round = int(self.last_epoch / self.cycle)
+        max_lr = self.base_lr * (self.restart_weight ** current_cycle_round)
+        lr = self.eta_min + 0.5 * (max_lr - self.eta_min) * \
                 (1 + math.cos(math.pi * reletive_epoch / self.cycle))
         return lr

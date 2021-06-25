@@ -202,11 +202,15 @@ class CyclicalCosine(object):
                  step_each_epoch,
                  epochs,
                  cycle,
+                 restart_weight=1.0,
+                 eta_min=0.0,
                  warmup_epoch=0,
                  last_epoch=-1,
                  **kwargs):
         super(CyclicalCosine, self).__init__()
         self.learning_rate = learning_rate
+        self.restart_weight = restart_weight
+        self.eta_min = eta_min
         self.T_max = step_each_epoch * epochs
         self.last_epoch = last_epoch
         self.warmup_epoch = round(warmup_epoch * step_each_epoch)
@@ -217,6 +221,8 @@ class CyclicalCosine(object):
             learning_rate=self.learning_rate,
             T_max=self.T_max,
             cycle=self.cycle,
+            restart_weight=self.restart_weight,
+            eta_min=self.eta_min,
             last_epoch=self.last_epoch)
         if self.warmup_epoch > 0:
             learning_rate = lr.LinearWarmup(
