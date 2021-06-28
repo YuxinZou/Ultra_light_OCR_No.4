@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
+
 from paddle import nn
 from paddle.nn import functional as F
 
@@ -157,7 +159,12 @@ class MobileNetV3(nn.Layer):
             if last_pool is None:
                 self.pool = nn.MaxPool2D(kernel_size=2, stride=2, padding=0)
             else:
-                self.pool = nn.MaxPool2D(**last_pool)
+                cfg = copy.deepcopy(last_pool)
+                module_type = cfg.pop('type')
+                if module_type == 'max':
+                    self.pool = nn.MaxPool2D(**cfg)
+                elif module_type == 'mean':
+                    self.pool = nn.AvgPool2D(**cfg)
 
         self.out_channels = make_divisible(scale * cls_ch_squeeze)
 
