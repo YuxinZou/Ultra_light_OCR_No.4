@@ -75,7 +75,7 @@ def main():
         transforms.append(op)
     global_config['infer_mode'] = True
     ops = create_operators(transforms, global_config)
-
+    print(ops)
     save_res_path = config['Global'].get('save_res_path',
                                          "./output/rec/predicts_rec.txt")
     if not os.path.exists(os.path.dirname(save_res_path)):
@@ -88,7 +88,7 @@ def main():
             logger.info("infer_img: {}".format(file))
             with open(file, 'rb') as f:
                 img = f.read()
-                data = {'image': img}
+                data = {'image': img, 'epoch': 0, 'mode': 'test'}
             batch = transform(data, ops)
             if config['Architecture']['algorithm'] == "SRN":
                 encoder_word_pos_list = np.expand_dims(batch[1], axis=0)

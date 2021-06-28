@@ -31,6 +31,7 @@ from .rec_general import (
     Normalize,
     Pad,
     PatchPad,
+    WPad,
     Transpose,
 )
 from .rec_img_aug import (

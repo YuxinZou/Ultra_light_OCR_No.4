@@ -17,6 +17,7 @@ __all__ = [
     'Normalize',
     'Pad',
     'PatchPad',
+    'WPad',
     'Transpose',
 ]
 
@@ -345,7 +346,7 @@ class Pad:
 
 
 class PatchPad:
-    """ Pad in (c, h, w) order to make image size divisible.
+    """ Pad in (h, w, c) order to make image size divisible.
 
     NOTE: Walkaround for test-time padding, do not use otherwise!
     """
@@ -357,12 +358,12 @@ class PatchPad:
         self.divisor = divisor
 
     def __call__(self, data: Dict) -> Dict:
-        c, orig_h, orig_w = data['image'].shape
+        orig_h, orig_w, c = data['image'].shape
         h = int(np.ceil(orig_h / self.divisor) * self.divisor)
         w = int(np.ceil(orig_w / self.divisor) * self.divisor)
 
-        canvas = np.zeros((c, h, w), dtype=np.float32)
-        canvas[c, :orig_h, :orig_w] = data['image']
+        canvas = np.zeros((h, w, c), dtype=np.float32)
+        canvas[:orig_h, :orig_w, :] = data['image']
         data['image'] = canvas
 
         return data
@@ -371,6 +372,37 @@ class PatchPad:
         kwargs = ', '.join([
             f'divisor={self.divisor}',
         ])
+        return f'{self.__class__.__name__}({kwargs})'
+
+
+class WPad:
+    """ Pad in (h, w, c) order. """
+    def __init__(
+        self,
+        target_scale: [Tuple[int]] = (320, 32),
+        divisor: int = 1,
+        **kwargs,
+    ) -> None:
+
+        self.target_scale = target_scale
+        self.divisor = divisor
+
+    def __call__(self, data: Dict) -> Dict:
+        orig_h, orig_w, c = data['image'].shape
+        w, h = self.target_scale
+        w = max(w, orig_w)
+        w = int(np.ceil(w / self.divisor) * self.divisor)
+
+        canvas = np.zeros((h, w, c), dtype=data['image'].dtype)
+        canvas[:orig_h, :orig_w, :] = data['image']
+        data['image'] = canvas
+
+        return data
+
+    def __repr__(self) -> str:
+        kwargs = ', '.join([
+            f'target_scale={self.target_scale}',
+            ])
         return f'{self.__class__.__name__}({kwargs})'
 
 
