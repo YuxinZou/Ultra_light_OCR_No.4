@@ -31,23 +31,23 @@ def make_divisible(v, divisor=8, min_value=None):
 
 class MobileNetV3M(nn.Layer):
     def __init__(
-            self,
-            in_channels=3,
-            model_name='small',
-            scale=0.5,
-            large_stride=None,
-            small_stride=None,
-            last_pool=None,
-            ms_pool_type=None,
-            dropout_cfg=None,
-            overwrite_act=None,
-            force_shortcut=False,
-            force_se=False,
-            act_residual=False,
-            use_fpn=False,
-            fpn_out_channel=960,
-            norm_type='bn',
-            **kwargs,
+        self,
+        in_channels=3,
+        model_name='small',
+        scale=0.5,
+        large_stride=None,
+        small_stride=None,
+        last_pool=None,
+        ms_pool_type=None,
+        dropout_cfg=None,
+        overwrite_act=None,
+        force_shortcut=False,
+        force_se=False,
+        act_residual=False,
+        use_fpn=False,
+        fpn_out_channel=960,
+        norm_type='bn',
+        **kwargs,
     ):
         super(MobileNetV3M, self).__init__()
         # if small_stride is None:
@@ -156,14 +156,15 @@ class MobileNetV3M(nn.Layer):
                     force_shortcut=force_shortcut,
                     act_last=act_residual,
                     name='conv' + str(i + 2),
-                    norm_type = self.norm_type,
+                    norm_type=self.norm_type,
                 ))
             inplanes = make_divisible(scale * c)
             i += 1
         self.blocks = nn.Sequential(*block_list)
 
         if self.use_fpn:
-            self.fpn = FPNUnit(self.fpn_chns, self.fpn_mid_chn, norm_type=self.norm_type)
+            self.fpn = FPNUnit(
+                self.fpn_chns, self.fpn_mid_chn, norm_type=self.norm_type)
 
         self.conv2 = ConvBNLayer(
             in_channels=inplanes if not self.use_fpn else self.fpn_mid_chn,
@@ -241,19 +242,19 @@ class MobileNetV3M(nn.Layer):
 
 class ResidualUnit(nn.Layer):
     def __init__(
-            self,
-            in_channels,
-            mid_channels,
-            out_channels,
-            kernel_size,
-            stride,
-            use_se,
-            act=None,
-            force_shortcut=False,
-            act_last=False,
-            se_act='default',
-            name='',
-            norm_type='bn',
+        self,
+        in_channels,
+        mid_channels,
+        out_channels,
+        kernel_size,
+        stride,
+        use_se,
+        act=None,
+        force_shortcut=False,
+        act_last=False,
+        se_act='default',
+        name='',
+        norm_type='bn',
     ):
         super(ResidualUnit, self).__init__()
 
@@ -263,8 +264,8 @@ class ResidualUnit(nn.Layer):
             self.if_shortcut = True
             short_list = []
             if (
-                    (isinstance(stride, tuple) and max(stride) > 1) or
-                    (not isinstance(stride, tuple) and stride > 1)
+                (isinstance(stride, tuple) and max(stride) > 1) or
+                (not isinstance(stride, tuple) and stride > 1)
             ):
                 short_list.append(nn.AvgPool2D(
                     kernel_size=stride,
@@ -359,11 +360,11 @@ class ResidualUnit(nn.Layer):
 
 class SEModule(nn.Layer):
     def __init__(
-            self,
-            in_channels,
-            reduction=4,
-            name="",
-            act='default',
+        self,
+        in_channels,
+        reduction=4,
+        name="",
+        act='default',
     ):
         super(SEModule, self).__init__()
         self.act = act
@@ -412,16 +413,16 @@ class SEModule(nn.Layer):
 
 class ConvBNLayer(nn.Layer):
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride,
-            groups=1,
-            if_act=True,
-            act=None,
-            name=None,
-            norm_type='bn',
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        stride,
+        groups=1,
+        if_act=True,
+        act=None,
+        name=None,
+        norm_type='bn',
     ):
         super(ConvBNLayer, self).__init__()
         self.if_act = if_act
@@ -474,15 +475,15 @@ class ConvBNLayer(nn.Layer):
 
 class FPNUnit(nn.Layer):
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            stride=1,
-            use_se=True,
-            se_act='default',
-            name='fpn',
-            norm_type='bn',
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        stride=1,
+        use_se=True,
+        se_act='default',
+        name='fpn',
+        norm_type='bn',
     ):
         super(FPNUnit, self).__init__()
 
