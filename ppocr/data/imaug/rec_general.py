@@ -201,10 +201,11 @@ class Resize:
             phase, "ratio" during test phase.
             NOTE that with "max_width" mode, images may NOT be resized w.r.t.
             image aspect ratio if it's too long.
-        ms_start_epoch (bool): if True, will save "target_epoch" value to
+        record_target_scale (bool): if True, will save "target_epoch" value to
             `data`, for Pad transform.
         ms_start_epoch (int): only do multi-scale after specified epoch num,
             otherwise use the first `img_scale`
+        ms_mode (str): "epoch" or "iter", specifies which way to do ms.
     """
     valid_mode = ('ratio', 'max_width')
 
@@ -214,6 +215,8 @@ class Resize:
         ensures: str,
         record_target_scale: bool = True,
         ms_start_epoch: int = 0,
+        ms_mode: str = 'epoch',
+        ms_iter_interval: int = 0,
         **kwargs,
     ) -> None:
         if isinstance(img_scale, tuple):
@@ -225,11 +228,27 @@ class Resize:
         self.img_scale = img_scale
         self.ensures = ensures
         self.ms_start_epoch = ms_start_epoch
+        self.ms_mode = ms_mode
+        self.ms_iter_interval = ms_iter_interval
         self.record_target_scale = record_target_scale
 
-    def select_scale(self, epoch: int, mode: str = 'train') -> Tuple[int]:
+    def select_scale(
+        self,
+        epoch: Optional[int] = None,
+        iter: Optional[int] = None,
+        mode: str = 'train'
+    ) -> Tuple[int]:
         if mode == 'train' and epoch > self.ms_start_epoch:
-            return self.img_scale[epoch % len(self.img_scale)]
+            if self.ms_mode == 'epoch':
+                return self.img_scale[epoch % len(self.img_scale)]
+            elif self.ms_mode == 'iter':
+                scale = (iter // self.ms_iter_interval) % len(self.img_scale)
+                return self.img_scale[scale]
+            else:
+                raise ValueError(
+                    'Expect `ms_mode` in "epoch", "iter", '
+                    f'but got {self.ms_mode}'
+                )
         else:
             if mode != 'train':
                 assert len(self.img_scale) == 1, \
@@ -237,7 +256,11 @@ class Resize:
             return self.img_scale[0]
 
     def __call__(self, data: Dict) -> Dict:
-        scale = self.select_scale(epoch=data['epoch'], mode=data['mode'])
+        scale = self.select_scale(
+            epoch=data.get('epoch'),
+            iter=data.get('iter'),
+            mode=data['mode'],
+        )
         if self.ensures == 'max_width':
             img = resize_keep_max_width(data['image'], scale)
         else:
@@ -379,7 +402,7 @@ class WPad:
     """ Pad in (h, w, c) order. """
     def __init__(
         self,
-        target_scale: [Tuple[int]] = (320, 32),
+        target_scale: Tuple[int] = (320, 32),
         divisor: int = 1,
         **kwargs,
     ) -> None:

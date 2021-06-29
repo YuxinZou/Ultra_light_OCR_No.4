@@ -42,7 +42,8 @@ class SimpleDataSet(Dataset):
         self.data_dir = dataset_config['data_dir']
         self.do_shuffle = loader_config['shuffle']
 
-        self.seed = seed
+        self.seed = seed  # epoch num in practice this shit
+        self.current_iter = 0  # walkaround to pass iter num by Kuro
         np.random.seed(seed)
         logger.info("Initialize indexs of datasets:%s" % label_file_list)
         self.data_lines = self.get_image_info_list(label_file_list, ratio_list)
@@ -85,6 +86,7 @@ class SimpleDataSet(Dataset):
                 label=label,
                 mode=self.mode,
                 epoch=self.seed,
+                iter=self.current_iter,
             )
             if not os.path.exists(img_path):
                 raise Exception("{} does not exist!".format(img_path))
@@ -103,6 +105,7 @@ class SimpleDataSet(Dataset):
             rnd_idx = np.random.randint(self.__len__(
             )) if self.mode == "train" else (idx + 1) % self.__len__()
             return self.__getitem__(rnd_idx)
+        self.current_iter += 1
         return outs
 
     def __len__(self):
