@@ -1,6 +1,6 @@
 Global:
   use_gpu: true
-  epoch_num: 2000
+  epoch_num: 1500
   log_smooth_window: 20
   print_batch_step: 10
   save_model_dir: ./checkpoint/fusion2_fulldataset_LMNetS60H64_stride2x_new_trans_lr1x_decay4_sd
@@ -52,7 +52,7 @@ Architecture:
       start_epoch: 200
       final_p: 0.1
       start_block_idx: 12  # 12 for large:C5
-      curr_finish_epoch: 1500
+      curr_finish_epoch: 1000
   Neck:
     name: SequenceEncoder
     encoder_type: rnn
@@ -133,10 +133,6 @@ Train:
               saturation: 0.2
               hue: 0.2
               p: 0.5
-      # - ShiftJitter:
-      #     aug_prob: 1.0
-      #     size_thres: [10, 10]
-      #     shift_control: 0.01
       - PixelReverse:
           aug_prob: 0.4
       - CTCLabelEncode: # Class handling label
@@ -207,7 +203,7 @@ Test:
         is_rgb: False
     - WPad:
         target_scale: [480, 48]
-        divisor: 4
+        divisor: 12
     - Transpose:
         order: [2, 0, 1]  # (h, w, c) -> (c, h, w)
     - KeepKeys:
