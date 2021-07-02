@@ -4,7 +4,7 @@ Global:
   log_smooth_window: 20
   print_batch_step: 10
   save_model_dir: ./checkpoint/fusion2_fulldataset_LMNetS60H64_stride2x_new_trans_lr1x_decay4_sd
-  save_epoch_step: 5
+  save_epoch_step: 1
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 1000000]
   eval_epoch_step: 1
@@ -157,8 +157,8 @@ Train:
 Eval:
   dataset:
     name: SimpleDataSet
-    data_dir: ./data/testA/TestAImages
-    label_file_list: ["./data/testA/test_A.txt"]
+    data_dir: ./data/testB/TestBImages
+    label_file_list: ["./data/testB/test_B.txt"]
     transforms:
       - DecodeImage: # load image
           img_mode: BGR
