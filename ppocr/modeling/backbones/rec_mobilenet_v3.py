@@ -170,7 +170,7 @@ class MobileNetV3(nn.Layer):
 
         if dropout_cfg is None:
             dropout_cfg = dict()
-        self.dp_start_epoch = dropout_cfg.get('start_epoch')
+        self.dp_start_epoch = dropout_cfg.get('start_epoch', 1e10)
         self.dp_curr_finish_epoch = dropout_cfg.get('curr_finish_epoch')
         self.dp_final_p = dropout_cfg.get('final_p')
         self.dp_start_block_idx = dropout_cfg.get('start_block_idx')
