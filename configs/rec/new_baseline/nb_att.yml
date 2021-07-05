@@ -51,7 +51,7 @@ Architecture:
     hidden_size: 48
   Head:
     name: AttentionHead
-    hidden_size: 96
+    hidden_size: 48
     l2_decay: 0.00001
 
 Loss:
