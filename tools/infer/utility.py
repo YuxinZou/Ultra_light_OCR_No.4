@@ -60,6 +60,8 @@ def parse_args():
     parser.add_argument("--det_sast_polygon", type=bool, default=False)
 
     # params for text recognizer
+    parser.add_argument("--rec_config", type=str, default="./configs/rec/ch_ppocr_v2.0/rec_chinese_lite_train_v2.0.yml")
+    parser.add_argument('--save_res_path', type=str, default="./output/rec/predict_rec.txt")
     parser.add_argument("--rec_algorithm", type=str, default='CRNN')
     parser.add_argument("--rec_model_dir", type=str)
     parser.add_argument("--rec_image_shape", type=str, default="3, 32, 320")

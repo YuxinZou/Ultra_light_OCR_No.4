@@ -37,7 +37,7 @@ class AttentionHead(nn.Layer):
         input_ont_hot = F.one_hot(input_char, onehot_dim)
         return input_ont_hot
 
-    def forward(self, inputs, targets=None, batch_max_length=25):
+    def forward(self, inputs, targets=None, batch_max_length=30):
         batch_size = paddle.shape(inputs)[0]
         num_steps = batch_max_length
 
