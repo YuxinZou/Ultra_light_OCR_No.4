@@ -15,7 +15,7 @@ Global:
   use_visualdl: False
   infer_img: doc/imgs_words/ch/word_1.jpg
   # for data or label process
-  character_dict_path: ppocr/utils/ppocr_keys_trainval.txt
+  character_dict_path: ppocr/utils/ppocr_keys_trainval.txt  # train集里所有字符
   character_type: ch
   max_text_length: 25
   infer_mode: False
@@ -44,12 +44,12 @@ Architecture:
     scale: 0.6
     model_name: large
     large_stride: [[1,1], [2,2], [2,1], [2,1]]
-    last_pool:
+    last_pool:  # backbone最后一层pool的配置
       type: max
       kernel_size: 3
       stride: 3
       padding: 0
-    dropout_cfg:
+    dropout_cfg:  # 在backbone中做dropblock
       start_epoch: 200
       final_p: 0.1
       start_block_idx: 12  # 12 for large:C5
@@ -61,6 +61,8 @@ Architecture:
   Head:
     name: CTCHead
     fc_decay: 0.00004
+    dropout:
+      p: 0.1
 
 Loss:
   name: CTCLoss
@@ -204,7 +206,7 @@ Test:
         is_rgb: False
     - WPad:
         target_scale: [480, 48]
-        divisor: 12
+        divisor: 12 # 确保宽度能被12整除
     - Transpose:
         order: [2, 0, 1]  # (h, w, c) -> (c, h, w)
     - KeepKeys:
