@@ -61,8 +61,6 @@ Architecture:
   Head:
     name: CTCHead
     fc_decay: 0.00004
-    dropout:
-      p: 0.1 
 
 Loss:
   name: CTCLoss
