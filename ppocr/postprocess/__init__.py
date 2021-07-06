@@ -26,12 +26,14 @@ def build_post_process(config, global_config=None):
     from .db_postprocess import DBPostProcess
     from .east_postprocess import EASTPostProcess
     from .sast_postprocess import SASTPostProcess
-    from .rec_postprocess import CTCLabelDecode, AttnLabelDecode, SRNLabelDecode, CTCLabelBeamSearchDecode
+    from .rec_postprocess import CTCLabelDecode, AttnLabelDecode, \
+        SRNLabelDecode, CTCLabelBeamSearchDecode
     from .cls_postprocess import ClsPostProcess
     from .pg_postprocess import PGPostProcess
 
     support_dict = [
-        'DBPostProcess', 'EASTPostProcess', 'SASTPostProcess', 'CTCLabelDecode','CTCLabelBeamSearchDecode',
+        'DBPostProcess', 'EASTPostProcess', 'SASTPostProcess', 'CTCLabelDecode',
+        'CTCLabelBeamSearchDecode',
         'AttnLabelDecode', 'ClsPostProcess', 'SRNLabelDecode', 'PGPostProcess'
     ]
 
