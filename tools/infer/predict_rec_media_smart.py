@@ -87,6 +87,7 @@ def main(args):
     text_recognizer = TextRecognizer(args)
     total_run_time = 0.0
     total_images_num = 0
+    os.makedirs(os.path.dirname(args.save_res_path), exist_ok=True)
     with open(args.save_res_path, "w") as fout:
         for idx, image_file in enumerate(image_file_list):
             rec_res, predict_time = text_recognizer(image_file)
