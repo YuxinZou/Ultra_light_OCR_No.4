@@ -1,0 +1,213 @@
+Global:
+  use_gpu: true
+  epoch_num: 2000
+  log_smooth_window: 20
+  print_batch_step: 10
+  save_model_dir: ./checkpoint/step2
+  save_epoch_step: 1
+  # evaluation is run every 5000 iterations after the 4000th iteration
+  eval_batch_step: [0, 1000000]
+  eval_epoch_step: 1
+  cal_metric_during_train: True
+  pretrained_model:
+  checkpoints:
+  save_inference_dir:
+  use_visualdl: False
+  infer_img: doc/imgs_words/ch/word_1.jpg
+  # for data or label process
+  character_dict_path: ppocr/utils/ppocr_keys_trainval.txt
+  character_type: ch
+  max_text_length: 25
+  infer_mode: False
+  use_space_char: False
+  save_res_path: ./output/rec/step2.txt
+
+Optimizer:
+  name: Adam
+  beta1: 0.9
+  beta2: 0.999
+  lr:
+    name: CyclicalCosine
+    learning_rate: 0.0001
+    cycle: 50
+    eta_min: 0.00001
+  regularizer:
+    name: 'L2'
+    factor: 0.00001
+
+Architecture:
+  model_type: rec
+  algorithm: CRNN
+  Transform:
+  Backbone:
+    name: MobileNetV3
+    scale: 0.6
+    model_name: large
+    large_stride: [[1,1], [2,2], [2,1], [2,1]]
+    last_pool:
+      type: max
+      kernel_size: 3
+      stride: 3
+      padding: 0
+    dropout_cfg:
+      start_epoch: 200
+      final_p: 0.1
+      start_block_idx: 12  # 12 for large:C5
+      curr_finish_epoch: 1000
+  Neck:
+    name: SequenceEncoder
+    encoder_type: rnn
+    hidden_size: 64
+  Head:
+    name: CTCHead
+    fc_decay: 0.00004
+    dropout:
+      p: 0.1
+
+Loss:
+  name: CTCLoss
+
+PostProcess:
+  name: CTCLabelDecode
+
+Metric:
+  name: RecMetric
+  main_indicator: acc
+
+Train:
+  dataset:
+    name: SimpleDataSet
+    data_dir: ./data/trainval/TrainImages/
+    label_file_list: ["./data/trainval/LabelTrain.txt"]
+    transforms:
+      - DecodeImage: # load image
+          img_mode: BGR
+          channel_first: False
+      - HeightRatioCrop:
+          aug_prob: 0.5
+          crop_ratio: !!python/tuple [0, 0.05]
+      - Resize:
+          img_scale:
+            - !!python/tuple [480, 48]  # (w, h) order
+          ensures: max_width
+          record_target_scale: True
+      - Imau:
+          transforms:
+            - typename: Sometimes
+              p: 0.5
+              then_list:
+                - typename: Cutout
+                  nb_iterations: !!python/tuple [1, 3]
+                  size: !!python/tuple [0.05, 0.1]
+                  squared: False
+                  fill_mode: constant
+                  cval: !!python/tuple [0, 255]
+                  fill_per_channel: True
+      - Tia:
+          aug_prob: 0.4
+          distort: True
+          stretch: True
+          perspective: True
+          size_thres: [20, 20]
+      - Imau:
+          transforms:
+            - typename: Sometimes
+              p: 0.5
+              then_list:
+                - typename: AdditiveGaussianNoise
+                  loc: 0
+                  scale: !!python/tuple [0, 10]
+                  per_channel: True
+      - Imau:
+          transforms:
+            - typename: Sometimes
+              p: 0.5
+              then_list:
+                - typename: MotionBlur
+                  k: !!python/tuple [3, 7]
+                  angle: !!python/tuple [0, 360]
+                  direction: !!python/tuple [-1.0, 1.0]
+                  order: 1
+      - Albu:
+          transforms:
+            - typename: ColorJitter
+              brightness: 0.2
+              contrast: 0.2
+              saturation: 0.2
+              hue: 0.2
+              p: 0.5
+      - PixelReverse:
+          aug_prob: 0.4
+      - CTCLabelEncode: # Class handling label
+      - ToFloat:
+          key: ['image']
+      - Normalize:
+          mean: [127.5, 127.5, 127.5]
+          std: [127.5, 127.5, 127.5]
+          is_rgb: False
+      - Pad:
+          use_record_target_scale: True
+      - Transpose:
+          order: [2, 0, 1]  # (h, w, c) -> (c, h, w)
+      - KeepKeys:
+          keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
+  loader:
+    shuffle: True
+    batch_size_per_card: 128
+    drop_last: True
+    num_workers: 8
+
+Eval:
+  dataset:
+    name: SimpleDataSet
+    data_dir: ./data/testB/TestBImages
+    label_file_list: ["./data/testB/test_B.txt"]
+    transforms:
+      - DecodeImage: # load image
+          img_mode: BGR
+          channel_first: False
+      - Resize:
+          img_scale: !!python/tuple [480, 48]  # (w, h) order
+          ensures: max_width
+          record_target_scale: True
+      - CTCLabelEncode: # Class handling label
+      - ToFloat:
+          key: ['image']
+      - Normalize:
+          mean: [127.5, 127.5, 127.5]
+          std: [127.5, 127.5, 127.5]
+          is_rgb: False
+      - Pad:
+          use_record_target_scale: True
+      - Transpose:
+          order: [2, 0, 1]  # (h, w, c) -> (c, h, w)
+      - KeepKeys:
+          keep_keys: ['image', 'label', 'length'] # dataloader will return list in this order
+  loader:
+    shuffle: False
+    drop_last: False
+    batch_size_per_card: 128
+    num_workers: 8
+
+Test:
+  transforms:
+    - DecodeImage: # load image
+        img_mode: BGR
+        channel_first: False
+    - Resize:
+        img_scale: !!python/tuple [480, 48]  # (w, h) order
+        ensures: ratio
+        record_target_scale: True
+    - ToFloat:
+        key: ['image']
+    - Normalize:
+        mean: [127.5, 127.5, 127.5]
+        std: [127.5, 127.5, 127.5]
+        is_rgb: False
+    - WPad:
+        target_scale: [480, 48]
+        divisor: 12
+    - Transpose:
+        order: [2, 0, 1]  # (h, w, c) -> (c, h, w)
+    - KeepKeys:
+        keep_keys: ['image']
