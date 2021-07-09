@@ -8,7 +8,7 @@ Global:
   # evaluation is run every 5000 iterations after the 4000th iteration
   eval_batch_step: [0, 1000000]
   eval_epoch_step: 1
-  cal_metric_during_train: True
+  cal_metric_during_train: False
   pretrained_model:
   checkpoints:
   save_inference_dir:
@@ -160,8 +160,8 @@ Train:
 Eval:
   dataset:
     name: SimpleDataSet
-    data_dir: ./data/testB/TestBImages
-    label_file_list: ["./data/testB/test_B.txt"]
+    data_dir: ./data/trainval/TrainImages/
+    label_file_list: ["./data/trainval/LabelTrain.txt"]
     transforms:
       - DecodeImage: # load image
           img_mode: BGR
